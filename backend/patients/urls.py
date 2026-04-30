@@ -1,22 +1,32 @@
 from django.urls import path
 from patients.views import (
-    DashboardSummaryView,
     PatientListCreateView,
     PatientDetailView,
     MedicalRecordListCreateView,
     MedicalRecordDetailView,
     AnalysisResultListView,
+    DashboardSummaryView,
+    DataUploadView,
+    AnalyseView,
+    PredictView,
+    BatchReportListView,
+    BatchReportDetailView,
+    PatientAnalysesView,
 )
+from patients.views.analysis_views import AnalysePatientView
 
 urlpatterns = [
-    # Dashboard
-    path("dashboard/", DashboardSummaryView.as_view(), name="dashboard-summary"),
-    # Patients
-    path("patients/", PatientListCreateView.as_view(), name="patient-list-create"),
-    path("patients/<int:pk>/", PatientDetailView.as_view(), name="patient-detail"),
-    # Medical Records
-    path("records/", MedicalRecordListCreateView.as_view(), name="record-list-create"),
-    path("records/<int:pk>/", MedicalRecordDetailView.as_view(), name="record-detail"),
-    # Analysis Results
-    path("analyses/", AnalysisResultListView.as_view(), name="analysis-list"),
+    path("patients/", PatientListCreateView.as_view()),
+    path("patients/<int:pk>/", PatientDetailView.as_view()),
+    path("records/", MedicalRecordListCreateView.as_view()),
+    path("records/<int:pk>/", MedicalRecordDetailView.as_view()),
+    path("analyses/", AnalysisResultListView.as_view()),
+    path("dashboard/", DashboardSummaryView.as_view()),
+    path("upload/", DataUploadView.as_view()),
+    path("analyse/", AnalyseView.as_view()),
+    path("predict/", PredictView.as_view()),
+    path("reports/", BatchReportListView.as_view()),
+    path("reports/<int:pk>/", BatchReportDetailView.as_view()),
+    path("patients/<int:pk>/analyses/", PatientAnalysesView.as_view()),
+    path("patients/<int:pk>/analyse/", AnalysePatientView.as_view()),
 ]

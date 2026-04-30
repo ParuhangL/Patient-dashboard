@@ -1,19 +1,23 @@
 from django.db import models
+from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .base import BaseHealthEntity
 
 
 class Patient(BaseHealthEntity):
-    """
-    Core patient model.
-    OOP: Inherits from BaseHealthEntity (gets created_at, updated_at, is_active)
-    Encapsulates risk logic inside the model itself.
-    """
+    # ── Owner ──────────────────────────────────────────────────────────
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="patients",
+        null=True,  # null for now so existing rows don't break migration
+        blank=True,
+    )
 
     # ── Demographics ───────────────────────────────────────────────────
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    date_of_birth = models.DateField()
+    date_of_birth = models.DateField(null=True, blank=True)
     gender = models.CharField(
         max_length=10, choices=[("M", "Male"), ("F", "Female"), ("O", "Other")]
     )
@@ -49,7 +53,6 @@ class Patient(BaseHealthEntity):
 
     @property
     def age(self):
-        """Calculated age - not stored in DB."""
         from datetime import date
 
         today = date.today()
@@ -60,10 +63,6 @@ class Patient(BaseHealthEntity):
 
     @property
     def risk_level(self):
-        """
-        Rule-based risk classification.
-        OOP: Encapsulation - logic lives in model, not in views.
-        """
         score = 0
         if self.blood_pressure_systolic and self.blood_pressure_systolic > 140:
             score += 2

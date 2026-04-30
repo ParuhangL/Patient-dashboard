@@ -1,0 +1,11 @@
+first_name,last_name,age,gender,bmi,blood_pressure_systolic,blood_pressure_diastolic,heart_rate,glucose_level,cholesterol,is_smoker,is_diabetic,has_hypertension
+John,Doe,50,M,28.4,140,90,75,130,210,1,1,1
+Emily,Clark,34,F,23.7,120,78,70,95,180,0,0,0
+Michael,Adams,62,M,30.5,160,100,82,155,250,1,1,1
+Sophia,Turner,29,F,21.2,112,72,66,88,165,0,0,0
+David,Martinez,47,M,27.9,138,88,74,120,200,1,0,1
+Olivia,Garcia,41,F,26.3,132,84,72,110,190,0,0,1
+Daniel,Lopez,55,M,29.1,150,95,78,145,235,1,1,1
+Ava,Hernandez,37,F,24.5,125,80,69,100,175,0,0,0
+James,Gonzalez,65,M,31.8,165,102,85,170,270,1,1,1
+Mia,Wilson,31,F,22.8,118,76,67,92,168,0,0,0

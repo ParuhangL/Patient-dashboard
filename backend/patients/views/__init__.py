@@ -5,6 +5,14 @@ from .record_views import (
     MedicalRecordDetailView,
     AnalysisResultListView,
 )
+from .analysis_views import (
+    DataUploadView,
+    AnalyseView,
+    PredictView,
+    BatchReportListView,
+    BatchReportDetailView,
+)
+from .patient_views import PatientListCreateView, PatientDetailView, PatientAnalysesView
 
 __all__ = [
     "DashboardSummaryView",
@@ -13,4 +21,9 @@ __all__ = [
     "MedicalRecordListCreateView",
     "MedicalRecordDetailView",
     "AnalysisResultListView",
+    "DataUploadView",
+    "AnalyseView",
+    "PredictView",
+    "BatchReportListView",
+    "BatchReportDetailView",
 ]

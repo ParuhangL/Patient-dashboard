@@ -1,0 +1,6 @@
+first_name,last_name,date_of_birth,gender,bmi,blood_pressure_systolic,blood_pressure_diastolic,heart_rate,glucose_level,cholesterol,is_smoker,is_diabetic,has_hypertension
+Jane,Smith,1979-03-15,F,27.3,135,85,72,110,195,0,0,1
+Bob,Johnson,1964-07-22,M,31.2,155,95,80,145,240,1,1,1
+Alice,Brown,1992-11-08,F,22.1,118,75,68,90,170,0,0,0
+Tom,Wilson,1969-05-30,M,29.8,148,92,76,160,260,1,1,1
+Sara,Lee,1996-01-12,F,19.5,110,70,65,85,155,0,0,0

@@ -4,12 +4,16 @@ from patients.serializers import MedicalRecordSerializer, AnalysisResultSerializ
 
 
 class MedicalRecordListCreateView(generics.ListCreateAPIView):
-    """GET /api/records/  POST /api/records/"""
-
     serializer_class = MedicalRecordSerializer
 
     def get_queryset(self):
-        qs = MedicalRecord.objects.select_related("patient").order_by("-visit_date")
+        # Only records belonging to this user's patients
+        qs = (
+            MedicalRecord.objects.select_related("patient")
+            .filter(patient__owner=self.request.user)
+            .order_by("-visit_date")
+        )
+
         patient_id = self.request.query_params.get("patient_id")
         if patient_id:
             qs = qs.filter(patient_id=patient_id)
@@ -17,19 +21,23 @@ class MedicalRecordListCreateView(generics.ListCreateAPIView):
 
 
 class MedicalRecordDetailView(generics.RetrieveUpdateDestroyAPIView):
-    """GET/PUT/PATCH/DELETE /api/records/<id>/"""
-
-    queryset = MedicalRecord.objects.all()
     serializer_class = MedicalRecordSerializer
+
+    def get_queryset(self):
+        return MedicalRecord.objects.filter(patient__owner=self.request.user)
 
 
 class AnalysisResultListView(generics.ListAPIView):
-    """GET /api/analyses/"""
-
     serializer_class = AnalysisResultSerializer
 
     def get_queryset(self):
-        qs = AnalysisResult.objects.select_related("patient").order_by("-created_at")
+        # Only analyses belonging to this user's patients
+        qs = (
+            AnalysisResult.objects.select_related("patient")
+            .filter(patient__owner=self.request.user)
+            .order_by("-created_at")
+        )
+
         patient_id = self.request.query_params.get("patient_id")
         if patient_id:
             qs = qs.filter(patient_id=patient_id)

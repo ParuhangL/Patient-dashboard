@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+* { box-sizing: border-box; }
+
+body {
+  background-color: #0f1117;
+  color: #e2e8f0;
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #161b27; }
+::-webkit-scrollbar-thumb { background: #2a3347; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+
+.card { background: #161b27; border: 1px solid #2a3347; border-radius: 12px; }
+.badge-low    { background: #064e3b; color: #6ee7b7; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.badge-medium { background: #78350f; color: #fcd34d; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+.badge-high   { background: #7f1d1d; color: #fca5a5; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.3s ease forwards; }
