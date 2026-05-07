@@ -8,6 +8,9 @@ import AnalysisPage from './pages/AnalysisPage'
 import UploadPage from './pages/UploadPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import AdminLogin from './admin/AdminLogin'
+import AdminPage from './admin/AdminPage'
+
 
 const PAGE_MAP = {
   '/dashboard': 'dashboard',
@@ -72,6 +75,16 @@ function AppInner() {
     setIsAuth(false)
     setUser(null)
     navigate('/login')
+  }
+
+  // ── Admin routes — handle before anything else ──
+  if (location.pathname === '/admin-panel/login') {
+    return <AdminLogin />
+  }
+  if (location.pathname.startsWith('/admin-panel')) {
+    const token = localStorage.getItem('adminToken')
+    if (!token) return <Navigate to="/admin-panel/login" replace />
+    return <AdminPage />
   }
 
   // Conditional returns AFTER all hooks

@@ -6,6 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   ScatterChart, Scatter, ZAxis,
 } from 'recharts'
+import { createPortal } from 'react-dom'
 
 function RiskBadge({ risk }) {
   const cls = risk === 'HIGH' ? 'badge-high' : risk === 'MEDIUM' ? 'badge-medium' : 'badge-low'
@@ -67,12 +68,34 @@ function ResultDetail({ result, modelType }) {
     )
   }
 
+  if (modelType === 'linear_regression') {
+    return (
+      <span style={{ fontSize: 12, color: '#94a3b8' }}>
+        Predicted BP: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+          {result.predicted_systolic_bp != null ? `${result.predicted_systolic_bp} mmHg` : '—'}
+        </span>
+      </span>
+    )
+  }
+
+  if (modelType === 'kmeans') {
+    return (
+      <span style={{
+        fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+        background: result.profile === 'High Risk' ? '#7f1d1d' : result.profile === 'Moderate Risk' ? '#78350f' : '#064e3b',
+        color: result.profile === 'High Risk' ? '#fca5a5' : result.profile === 'Moderate Risk' ? '#fcd34d' : '#6ee7b7',
+      }}>
+        {result.profile || `Cluster ${result.cluster_id}`}
+      </span>
+    )
+  }
+
   return <span style={{ fontSize: 12, color: '#64748b' }}>{JSON.stringify(result).slice(0, 60)}...</span>
 }
 
 const RISK_COLORS = { LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444' }
 
-function RiskPieChart({ analyses }) {
+function RiskPieChart({ analyses, height = 200 }) {
   const counts = { LOW: 0, MEDIUM: 0, HIGH: 0 }
   analyses.forEach(a => { if (a.risk_label) counts[a.risk_label]++ })
   const data = Object.entries(counts)
@@ -86,7 +109,7 @@ function RiskPieChart({ analyses }) {
   )
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer width="100%" height={height}>
       <PieChart>
         <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={72} label={false} labelLine={false}>
           {data.map(entry => (
@@ -100,7 +123,7 @@ function RiskPieChart({ analyses }) {
   )
 }
 
-function ConfidenceBarChart({ analyses, modelCounts }) {
+function ConfidenceBarChart({ analyses, modelCounts, height = 200 }) {
   const modelTotals = {}
   const modelConfSum = {}
   analyses.forEach(a => {
@@ -122,7 +145,7 @@ function ConfidenceBarChart({ analyses, modelCounts }) {
   )
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
+    <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
         <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
@@ -142,15 +165,27 @@ function ConfidenceBarChart({ analyses, modelCounts }) {
   )
 }
 
-function RiskScatterChart({ analyses }) {
+// REPLACE the entire RiskScatterChart function:
+function RiskScatterChart({ analyses, height = 200 }) {
+  const MODEL_SCATTER_COLORS = { decision_tree: '#8b5cf6', logistic: '#06b6d4' }
+
   const data = analyses
-    .filter(a => a.confidence != null && a.risk_label)
-    .map(a => ({
-      confidence: Math.round(a.confidence * 100),
-      risk: a.risk_label === 'LOW' ? 1 : a.risk_label === 'MEDIUM' ? 2 : 3,
-      riskLabel: a.risk_label,
-      fill: RISK_COLORS[a.risk_label],
-    }))
+    .filter(a => a.confidence != null && a.risk_label && ['decision_tree', 'logistic'].includes(a.model_type))
+    .map(a => {
+      let risk
+      if (a.model_type === 'logistic') {
+        risk = a.risk_label === 'Diabetic' ? 3 : 1
+      } else {
+        risk = a.risk_label === 'LOW' ? 1 : a.risk_label === 'MEDIUM' ? 2 : 3
+      }
+      return {
+        confidence: Math.round(a.confidence * 100) + (Math.random() * 4 - 2),
+        risk: risk + (Math.random() * 0.3 - 0.15),
+        riskLabel: a.risk_label,
+        model: a.model_type,
+        fill: MODEL_SCATTER_COLORS[a.model_type],
+      }
+    })
 
   if (data.length === 0) return (
     <div style={{ color: '#64748b', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>
@@ -159,24 +194,58 @@ function RiskScatterChart({ analyses }) {
   )
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <ScatterChart margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-        <XAxis dataKey="confidence" name="Confidence" unit="%" tick={{ fill: '#64748b', fontSize: 11 }} />
-        <YAxis dataKey="risk" name="Risk" tick={{ fill: '#64748b', fontSize: 11 }}
-          tickFormatter={v => ['', 'LOW', 'MED', 'HIGH'][v] || v} domain={[0, 4]} />
-        <ZAxis range={[40, 40]} />
-        <Tooltip
-          cursor={{ strokeDasharray: '3 3' }}
-          contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
-          formatter={(v, name) => name === 'Risk' ? [['LOW','MED','HIGH'][v-1], name] : [`${v}%`, name]}
-        />
-        <Scatter data={data} shape={(props) => {
-          const { cx, cy, payload } = props
-          return <circle cx={cx} cy={cy} r={5} fill={payload.fill} fillOpacity={0.75} />
-        }} />
-      </ScatterChart>
-    </ResponsiveContainer>
+    <>
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
+        {Object.entries(MODEL_SCATTER_COLORS).map(([model, color]) => (
+          <div key={model} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
+            <span style={{ fontSize: 11, color: '#94a3b8' }}>{MODEL_LABELS[model]}</span>
+          </div>
+        ))}
+      </div>
+      <ResponsiveContainer width="100%" height={height}>
+        <ScatterChart margin={{ top: 4, right: 8, left: 20, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
+          <XAxis
+            dataKey="confidence"
+            name="Confidence"
+            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            type="number"
+            domain={[0, 100]}
+            tickCount={6}
+            tickFormatter={v => `${v}%`}
+          />
+          <YAxis
+            dataKey="risk"
+            name="Risk"
+            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            tickFormatter={v => ['', 'Non-Diabetic', 'MED', 'Diabetic'][v] || ''}
+            domain={[0, 4]}
+            ticks={[1, 2, 3]}
+          />
+          <ZAxis range={[40, 40]} />
+          <Tooltip
+            cursor={{ strokeDasharray: '3 3' }}
+            contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
+            labelStyle={{ color: '#e2e8f0' }}
+            itemStyle={{ color: '#94a3b8' }}
+            formatter={(v, name) => {
+              if (name === 'Risk') return [['', 'Non-Diabetic', 'Medium Risk', 'Diabetic'][Math.round(v)] || Math.round(v), 'Risk']
+              if (name === 'Confidence') return [`${Number(v).toFixed(1)}%`, 'Confidence']
+              return [v, name]
+            }}
+          />
+          <Scatter
+            data={data}
+            shape={(props) => {
+              const { cx, cy, payload } = props
+              return <circle cx={cx} cy={cy} r={3} fill={payload.fill} fillOpacity={0.7} />
+            }}
+          />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </>
   )
 }
 
@@ -208,6 +277,7 @@ export default function AnalysisPage() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const PAGE_SIZE = 15
+  const [expandedChart, setExpandedChart] = useState(null) // 'risk' | 'confidence' | 'scatter'
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -263,7 +333,8 @@ export default function AnalysisPage() {
     acc[a.model_type] = (acc[a.model_type] || 0) + 1
     return acc
   }, {})
-  const topModel = Object.entries(modelCounts).sort((a, b) => b[1] - a[1])[0]?.[0]
+  const sorted = Object.entries(modelCounts).sort((a, b) => b[1] - a[1])
+  const topModel = sorted.length > 1 && sorted[0][1] === sorted[1][1] ? null : sorted[0]?.[0]
 
   return (
     <div className="animate-fade-in">
@@ -280,7 +351,7 @@ export default function AnalysisPage() {
         <StatCard label="Total Results"   value={total}    color="#3b82f6" />
         <StatCard label="High Risk"       value={highRisk} color="#ef4444" />
         <StatCard label="Diabetic Flags"  value={diabetic} color="#f59e0b" />
-        <StatCard label="Most Used Model" value={topModel ? MODEL_LABELS[topModel]?.split(' ')[1] : '—'} color="#10b981" />
+        <StatCard label="Most Used Model" value={topModel ? MODEL_LABELS[topModel]?.split(' ')[1] : 'All Equal'} color="#10b981" />
       </div>
 
       {/* Model breakdown bar */}
@@ -312,26 +383,74 @@ export default function AnalysisPage() {
 
       {/* Charts Row */}
       {analyses.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-          <div className="card" style={{ padding: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Risk Distribution
-            </div>
-            <RiskPieChart analyses={analyses} />
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+            {[
+              { key: 'risk',       label: 'Risk Distribution' },
+              { key: 'confidence', label: 'Avg Confidence by Model' },
+              { key: 'scatter',    label: 'Confidence vs Risk · Decision Tree & Logistic Only' },
+            ].map(({ key, label }) => (
+              <div
+                key={key}
+                className="card"
+                onClick={() => setExpandedChart(key)}
+                style={{ padding: 20, cursor: 'pointer', transition: 'border-color 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = '#2a3347'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {label}
+                  </div>
+                  <span style={{ fontSize: 10, color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 4, padding: '2px 7px', fontWeight: 600 }}>
+                    EXPAND
+                  </span>
+                </div>
+                {key === 'risk'       && <RiskPieChart analyses={analyses} />}
+                {key === 'confidence' && <ConfidenceBarChart analyses={analyses} modelCounts={modelCounts} />}
+                {key === 'scatter'    && <RiskScatterChart analyses={analyses} />}
+              </div>
+            ))}
           </div>
-          <div className="card" style={{ padding: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Avg Confidence by Model
-            </div>
-            <ConfidenceBarChart analyses={analyses} modelCounts={modelCounts} />
-          </div>
-          <div className="card" style={{ padding: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
-              Confidence vs Risk (Scatter)
-            </div>
-            <RiskScatterChart analyses={analyses} />
-          </div>
-        </div>
+
+          {/* Expanded Chart Modal */}
+          {expandedChart && createPortal(
+            <div
+              style={{
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
+                background: 'rgba(0,0,0,0.8)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '40px 32px',
+              }}
+              onClick={() => setExpandedChart(null)}
+            >
+              <div
+                style={{
+                  background: '#161b27', border: '1px solid #2a3347',
+                  borderRadius: 14, padding: 32,
+                  width: '100%', maxWidth: 900,
+                }}
+                onClick={e => e.stopPropagation()}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+                    {expandedChart === 'risk'       && 'Risk Distribution'}
+                    {expandedChart === 'confidence' && 'Avg Confidence by Model'}
+                    {expandedChart === 'scatter'    && 'Confidence vs Risk — Decision Tree & Logistic Regression'}
+                  </div>
+                  <button
+                    onClick={() => setExpandedChart(null)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 22, lineHeight: 1 }}
+                  >×</button>
+                </div>
+                {expandedChart === 'risk'       && <RiskPieChart analyses={analyses} height={420} />}
+                {expandedChart === 'confidence' && <ConfidenceBarChart analyses={analyses} modelCounts={modelCounts} height={420} />}
+                {expandedChart === 'scatter'    && <RiskScatterChart analyses={analyses} height={420} />}
+              </div>
+            </div>,
+            document.body
+          )}
+        </>
       )}
 
       {/* Filters */}

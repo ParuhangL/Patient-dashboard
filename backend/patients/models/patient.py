@@ -64,21 +64,32 @@ class Patient(BaseHealthEntity):
     @property
     def risk_level(self):
         score = 0
-        if self.blood_pressure_systolic and self.blood_pressure_systolic > 140:
-            score += 2
-        if self.glucose_level and self.glucose_level > 126:
-            score += 2
-        if self.bmi and self.bmi > 30:
+        if self.blood_pressure_systolic:
+            if self.blood_pressure_systolic >= 140:
+                score += 2
+            elif self.blood_pressure_systolic >= 130:
+                score += 1
+        if self.glucose_level:
+            if self.glucose_level >= 126:
+                score += 2
+            elif self.glucose_level >= 100:
+                score += 1
+        if self.bmi and self.bmi >= 30:
             score += 1
+        if self.cholesterol:
+            if self.cholesterol >= 240:
+                score += 2
+            elif self.cholesterol >= 200:
+                score += 1
         if self.is_smoker:
             score += 1
         if self.is_diabetic:
-            score += 2
+            score += 1
         if self.has_hypertension:
-            score += 2
+            score += 1
 
-        if score >= 6:
+        if score >= 5:
             return "HIGH"
-        elif score >= 3:
+        elif score >= 2:
             return "MEDIUM"
         return "LOW"

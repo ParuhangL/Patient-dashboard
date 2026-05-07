@@ -11,10 +11,13 @@ export const register = (username, password, email) =>
 export const getMe = () => client.get('/auth/me/')
 
 // ── Dashboard ───────────────────────────────────────────────────────────
-export const getDashboardSummary = () => client.get('/dashboard/')
+export const getDashboardSummary = (days) => client.get('/dashboard/', { params: days ? { days } : {} })
 
 // ── Patients ────────────────────────────────────────────────────────────
 export const getPatients = (params = {}) => client.get('/patients/', { params })
+// Fetches ALL patients (no page limit) for export/bulk select
+export const getAllPatients = (params = {}) =>
+  client.get('/patients/', { params: { ...params, page_size: 10000 } })
 export const getPatient = (id) => client.get(`/patients/${id}/`)
 export const createPatient = (data) => client.post('/patients/', data)
 export const updatePatient = (id, data) => client.put(`/patients/${id}/`, data)
@@ -63,3 +66,5 @@ export const getPatientAnalyses = (id) => client.get(`/patients/${id}/analyses/`
 export const analysePatient = (id) => client.post(`/patients/${id}/analyse/`)
 
 export const deleteReport = (id) => client.delete(`/reports/${id}/`)
+
+export const bulkDeletePatients = (ids) => client.delete('/patients/bulk-delete/', { data: { ids } })

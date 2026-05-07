@@ -64,11 +64,11 @@ function TrendTable({ data }) {
         <tbody>
           {data.predictions.map((val, i) => {
             const name = typeof val === 'object' ? val.patient_name : null
-            const bp   = typeof val === 'object' ? val.value : val
+            const bp   = typeof val === 'object' ? (val.predicted_bp ?? val.value) : val
             return (
               <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
                 <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{name || `Patient ${i + 1}`}</td>
-                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{bp.toFixed(1)} mmHg</td>
+                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{bp != null ? Number(bp).toFixed(1) : '—'} mmHg</td>
               </tr>
             )
           })}
@@ -216,6 +216,92 @@ function MLResults({ mlResults }) {
   )
 }
 
+// ── Print Report ──────────────────────────────────────────────────────────────
+function printAnalysisReport(reportData) {
+  const etl = reportData.etl_report || {}
+  const ml = reportData.ml_results || {}
+  const results = ml.results || {}
+
+  const statBox = (label, value, color) =>
+    `<div class="stat"><div class="stat-val" style="color:${color}">${value ?? '—'}</div><div class="stat-label">${label}</div></div>`
+
+  const modelTable = (title, rows) => rows ? `
+    <h3>${title}</h3>
+    <table>${rows}</table>` : ''
+
+  // Build each model's table HTML
+  const trendRows = results.trend_prediction?.predictions?.map((val, i) => {
+    const name = typeof val === 'object' ? val.patient_name : `Patient ${i+1}`
+    const bp = typeof val === 'object' ? (val.predicted_bp ?? val.value) : val
+    return `<tr><td>${name}</td><td>${bp != null ? Number(bp).toFixed(1) : '—'} mmHg</td></tr>`
+  }).join('') || ''
+
+  const clusterRows = results.clustering?.predictions?.map((p, i) =>
+    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.cluster_id}</td><td>${p.profile}</td></tr>`
+  ).join('') || ''
+
+  const diseaseRows = results.disease_prediction?.predictions?.map((p, i) =>
+    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.prediction}</td><td>${(p.probability_diabetic*100).toFixed(1)}%</td><td>${(p.probability_non_diabetic*100).toFixed(1)}%</td></tr>`
+  ).join('') || ''
+
+  const diagnosisRows = results.diagnosis_tree?.predictions?.map((p, i) =>
+    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.risk_label}</td><td>${(p.confidence*100).toFixed(0)}%</td></tr>`
+  ).join('') || ''
+
+  const ruleRows = results.rule_based?.predictions?.map((p, i) =>
+    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.risk_label}</td><td>${p.risk_score}</td><td>${(p.confidence*100).toFixed(0)}%</td><td>${p.triggered_rules?.join(', ') || 'None'}</td></tr>`
+  ).join('') || ''
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+  <title>Analysis Report${reportData.file_name ? ' — ' + reportData.file_name : ''}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1e293b;padding:32px 40px}
+    h2{font-size:18px;font-weight:700;margin-bottom:4px}
+    h3{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin:24px 0 8px;padding-bottom:6px;border-bottom:1px solid #e2e8f0}
+    .meta{font-size:12px;color:#64748b;margin-bottom:20px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .stat{background:#f8fafc;border-radius:6px;padding:10px 14px;border:1px solid #e2e8f0}
+    .stat-val{font-size:22px;font-weight:700}
+    .stat-label{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:8px}
+    thead tr{background:#f8fafc}
+    th{padding:7px 10px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#64748b;border-bottom:1px solid #e2e8f0}
+    td{padding:7px 10px;font-size:12px;border-bottom:1px solid #f1f5f9}
+    tr:last-child td{border-bottom:none}
+    .footer{margin-top:32px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:10px;color:#94a3b8;display:flex;justify-content:space-between}
+  </style></head><body>
+  <h2>Analysis Report${reportData.file_name ? ' — ' + reportData.file_name : ''}</h2>
+  <div class="meta">
+    Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}
+    ${reportData.total_rows ? ` &nbsp;·&nbsp; ${reportData.total_rows} rows` : ''}
+    ${reportData.notes ? ` &nbsp;·&nbsp; ${reportData.notes}` : ''}
+  </div>
+
+  <h3>ETL Pipeline</h3>
+  <div class="stats">
+    ${statBox('Total Rows', etl.total_rows, '#3b82f6')}
+    ${statBox('Duplicates Removed', etl.dropped_duplicates, '#f59e0b')}
+    ${statBox('Missing Filled', etl.filled_missing, '#10b981')}
+    ${statBox('Outliers Capped', etl.outliers_capped, '#06b6d4')}
+  </div>
+  ${etl.warnings?.length ? `<div style="font-size:12px;color:#d97706;margin-bottom:16px">⚠ ${etl.warnings.join(' · ')}</div>` : ''}
+
+  ${trendRows    ? modelTable('Trend Prediction (Linear Regression)',    `<thead><tr><th>Patient</th><th>Predicted Systolic BP</th></tr></thead><tbody>${trendRows}</tbody>`)    : ''}
+  ${clusterRows  ? modelTable('Patient Clustering (KMeans)',             `<thead><tr><th>Patient</th><th>Cluster</th><th>Risk Profile</th></tr></thead><tbody>${clusterRows}</tbody>`) : ''}
+  ${diseaseRows  ? modelTable('Disease Prediction (Logistic Regression)',`<thead><tr><th>Patient</th><th>Prediction</th><th>Diabetic %</th><th>Non-Diabetic %</th></tr></thead><tbody>${diseaseRows}</tbody>`) : ''}
+  ${diagnosisRows? modelTable('Diagnosis Tree (Decision Tree)',          `<thead><tr><th>Patient</th><th>Risk Label</th><th>Confidence</th></tr></thead><tbody>${diagnosisRows}</tbody>`) : ''}
+  ${ruleRows     ? modelTable('Rule-Based Diagnosis Engine',             `<thead><tr><th>Patient</th><th>Risk</th><th>Score</th><th>Confidence</th><th>Triggered Rules</th></tr></thead><tbody>${ruleRows}</tbody>`) : ''}
+
+  <div class="footer"><span>Patient Diagnostic Dashboard</span><span>Confidential — For clinical use only</span></div>
+  </body></html>`
+
+  const win = window.open('', '_blank', 'width=900,height=950')
+  win.document.write(html)
+  win.document.close()
+  win.onload = () => { win.focus(); win.print() }
+}
+
 // ── Report Detail Modal ───────────────────────────────────────────────────────
 function ReportModal({ reportId, onClose }) {
   const [report, setReport] = useState(null)
@@ -251,9 +337,25 @@ function ReportModal({ reportId, onClose }) {
               </div>
             )}
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}>
-            <X size={20} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {report && (
+              <button
+                onClick={() => printAnalysisReport(report)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '6px 14px', background: 'rgba(6,182,212,0.1)',
+                  border: '1px solid rgba(6,182,212,0.3)', borderRadius: 7,
+                  color: '#06b6d4', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}
+              >
+                <FileText size={13} /> Print Report
+              </button>
+            )}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
         {loading && <div style={{ color: '#64748b', fontSize: 13 }}>Loading report...</div>}
         {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
@@ -709,6 +811,20 @@ const [deleteLoading, setDeleteLoading] = useState(false)
           {uploadResult && (
             <div className="animate-fade-in">
               <Section title="✅ ETL Pipeline Report">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+                  <button
+                    onClick={() => printAnalysisReport({ ...uploadResult, file_name: file?.name })}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '6px 14px', background: 'rgba(6,182,212,0.1)',
+                      border: '1px solid rgba(6,182,212,0.3)', borderRadius: 7,
+                      color: '#06b6d4', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    <FileText size={13} /> Print Report
+                  </button>
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: uploadResult.etl_report?.warnings?.length > 0 ? 12 : 0 }}>
                   <StatMini label="Total Rows"         value={uploadResult.etl_report?.total_rows}         color="#3b82f6" />
                   <StatMini label="Duplicates Removed" value={uploadResult.etl_report?.dropped_duplicates} color="#f59e0b" />

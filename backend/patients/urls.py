@@ -14,6 +14,7 @@ from patients.views import (
     PatientAnalysesView,
 )
 from patients.views.analysis_views import AnalysePatientView
+from patients.views.patient_views import PatientBulkDeleteView
 
 urlpatterns = [
     path("patients/", PatientListCreateView.as_view()),
@@ -29,4 +30,5 @@ urlpatterns = [
     path("reports/<int:pk>/", BatchReportDetailView.as_view()),
     path("patients/<int:pk>/analyses/", PatientAnalysesView.as_view()),
     path("patients/<int:pk>/analyse/", AnalysePatientView.as_view()),
+    path("patients/bulk-delete/", PatientBulkDeleteView.as_view()),
 ]

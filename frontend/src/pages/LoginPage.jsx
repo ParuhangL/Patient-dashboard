@@ -138,6 +138,18 @@ export default function LoginPage({ onSuccess }) {
             Create one
           </Link>
         </p>
+
+        {/* Admin link */}
+        <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid #1e2535' }}>
+          <Link
+            to="/admin-panel/login"
+            style={{ fontSize: 11, color: '#334155', textDecoration: 'none' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#64748b'}
+            onMouseLeave={e => e.currentTarget.style.color = '#334155'}
+          >
+            🛡️ Staff access
+          </Link>
+        </div>
       </div>
     </div>
   )

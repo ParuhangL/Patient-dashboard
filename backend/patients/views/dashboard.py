@@ -1,12 +1,23 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Avg
+from django.utils import timezone
 from patients.models import Patient, MedicalRecord, AnalysisResult
+from datetime import date, timedelta
 
 
 class DashboardSummaryView(APIView):
     def get(self, request):
+        # ── Date range filter ──────────────────────────────────────────
+        days = request.query_params.get("days")
+        since = None
+        if days and days.isdigit():
+            since = timezone.now() - timedelta(days=int(days))
+
         patients = Patient.objects.filter(owner=request.user, is_active=True)
+        if since:
+            patients = patients.filter(created_at__gte=since)
+
         total = patients.count()
 
         if total == 0:
@@ -33,8 +44,6 @@ class DashboardSummaryView(APIView):
             avg_bp_systolic=Avg("blood_pressure_systolic"),
         )
 
-        from datetime import date
-
         ages = [
             (date.today() - p.date_of_birth).days // 365
             for p in patients
@@ -59,16 +68,19 @@ class DashboardSummaryView(APIView):
 
         patient_ids = patients.values_list("id", flat=True)
 
+        # Filter records and analyses by the same window if set
+        records_qs = MedicalRecord.objects.filter(patient_id__in=patient_ids)
+        analyses_qs = AnalysisResult.objects.filter(patient_id__in=patient_ids)
+        if since:
+            records_qs = records_qs.filter(created_at__gte=since)
+            analyses_qs = analyses_qs.filter(created_at__gte=since)
+
         return Response(
             {
                 "summary": {
                     "total_patients": total,
-                    "total_records": MedicalRecord.objects.filter(
-                        patient_id__in=patient_ids
-                    ).count(),
-                    "total_analyses": AnalysisResult.objects.filter(
-                        patient_id__in=patient_ids
-                    ).count(),
+                    "total_records": records_qs.count(),
+                    "total_analyses": analyses_qs.count(),
                     "avg_bmi": round(aggs["avg_bmi"], 1) if aggs["avg_bmi"] else None,
                     "avg_glucose": (
                         round(aggs["avg_glucose"], 1) if aggs["avg_glucose"] else None

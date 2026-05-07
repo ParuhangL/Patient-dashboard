@@ -62,7 +62,6 @@ class AnalyseView(APIView):
                     {"error": report.errors}, status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Reset index to ensure alignment
             df = df.reset_index(drop=True)
 
             # ---------------- ML ----------------
@@ -98,6 +97,8 @@ class AnalyseView(APIView):
                 results.get("disease_prediction", {}).get("predictions") or []
             )
             rule_preds = results.get("rule_based", {}).get("predictions") or []
+            trend_preds = results.get("trend_prediction", {}).get("predictions") or []
+            cluster_preds = results.get("clustering", {}).get("predictions") or []
 
             linked_count = 0
             created_count = 0
@@ -135,18 +136,14 @@ class AnalyseView(APIView):
                     else None
                 )
 
-                # Try match by email
-                # Try match by email — scoped to this user
                 if email_clean:
                     patient = Patient.objects.filter(
                         email=email_clean, owner=request.user
                     ).first()
 
-                # Try match by name — scoped to this user
                 if not patient:
                     first = str(row.get("first_name", "")).strip()
                     last = str(row.get("last_name", "")).strip()
-
                     if first and last:
                         patient = Patient.objects.filter(
                             first_name__iexact=first,
@@ -154,7 +151,6 @@ class AnalyseView(APIView):
                             owner=request.user,
                         ).first()
 
-                # Build fields
                 fields = {
                     "first_name": str(row.get("first_name", "Unknown")).strip()
                     or "Unknown",
@@ -176,20 +172,15 @@ class AnalyseView(APIView):
                     "has_hypertension": safe_bool(row.get("has_hypertension")),
                 }
 
-                # Only add date_of_birth if it has a real value
                 dob = safe_date(row.get("date_of_birth"))
                 if dob:
                     fields["date_of_birth"] = dob
 
-                # Only add email if it has a real value
                 email_clean = (
                     str(email).strip()
                     if pd.notna(email) and str(email).strip()
                     else None
                 )
-                if email_clean:
-                    fields["email"] = email_clean
-
                 if email_clean:
                     fields["email"] = email_clean
 
@@ -200,7 +191,6 @@ class AnalyseView(APIView):
                         owner=request.user,
                         defaults=fields,
                     )
-
                     if created:
                         created_count += 1
                     else:
@@ -209,7 +199,6 @@ class AnalyseView(APIView):
                                 setattr(patient, attr, val)
                         patient.save()
                         linked_count += 1
-
                 else:
                     if patient:
                         for attr, val in fields.items():
@@ -222,6 +211,8 @@ class AnalyseView(APIView):
                         created_count += 1
 
                 # ---------------- Save ML Results ----------------
+
+                # Decision Tree
                 if idx < len(diagnosis_preds):
                     pred = diagnosis_preds[idx]
                     if isinstance(pred, dict):
@@ -236,49 +227,26 @@ class AnalyseView(APIView):
                             },
                         )
 
+                # Logistic Regression
                 if idx < len(disease_preds):
                     pred = disease_preds[idx]
                     if isinstance(pred, dict):
+                        conf = max(
+                            pred.get("probability_diabetic") or 0,
+                            pred.get("probability_non_diabetic") or 0,
+                        )
                         AnalysisResult.objects.get_or_create(
                             patient=patient,
                             model_type="logistic",
                             notes=f"Batch upload: {file.name}",
                             defaults={
                                 "result": pred,
-                                "confidence": pred.get("probability_diabetic"),
+                                "confidence": round(conf, 4),
                                 "risk_label": pred.get("prediction", ""),
                             },
                         )
 
-                # ---------------- Save ML Results ----------------
-                if idx < len(diagnosis_preds):
-                    pred = diagnosis_preds[idx]
-                    if isinstance(pred, dict):
-                        AnalysisResult.objects.get_or_create(
-                            patient=patient,
-                            model_type="decision_tree",
-                            notes=f"Batch upload: {file.name}",
-                            defaults={
-                                "result": pred,
-                                "confidence": pred.get("confidence"),
-                                "risk_label": pred.get("risk_label", ""),
-                            },
-                        )
-
-                if idx < len(disease_preds):
-                    pred = disease_preds[idx]
-                    if isinstance(pred, dict):
-                        AnalysisResult.objects.get_or_create(
-                            patient=patient,
-                            model_type="logistic",
-                            notes=f"Batch upload: {file.name}",
-                            defaults={
-                                "result": pred,
-                                "confidence": pred.get("probability_diabetic"),
-                                "risk_label": pred.get("prediction", ""),
-                            },
-                        )
-
+                # Rule Based
                 if idx < len(rule_preds):
                     pred = rule_preds[idx]
                     if isinstance(pred, dict):
@@ -290,6 +258,41 @@ class AnalyseView(APIView):
                                 "result": pred,
                                 "confidence": pred.get("confidence"),
                                 "risk_label": pred.get("risk_label", ""),
+                            },
+                        )
+
+                # Linear Regression (Trend Prediction)
+                if idx < len(trend_preds):
+                    pred = trend_preds[idx]
+                    val = pred.get("predicted_bp") if isinstance(pred, dict) else pred
+                    bp_risk = (
+                        "HIGH"
+                        if (val or 0) > 140
+                        else "MEDIUM" if (val or 0) > 120 else "LOW"
+                    )
+                    AnalysisResult.objects.get_or_create(
+                        patient=patient,
+                        model_type="linear_regression",
+                        notes=f"Batch upload: {file.name}",
+                        defaults={
+                            "result": {"predicted_systolic_bp": val},
+                            "confidence": None,
+                            "risk_label": bp_risk,
+                        },
+                    )
+
+                # KMeans Clustering
+                if idx < len(cluster_preds):
+                    pred = cluster_preds[idx]
+                    if isinstance(pred, dict):
+                        AnalysisResult.objects.get_or_create(
+                            patient=patient,
+                            model_type="kmeans",
+                            notes=f"Batch upload: {file.name}",
+                            defaults={
+                                "result": pred,
+                                "confidence": None,
+                                "risk_label": pred.get("profile", ""),
                             },
                         )
 
@@ -319,9 +322,7 @@ class AnalyseView(APIView):
             )
 
         except Exception as e:
-            import traceback
-
-            traceback.print_exc()  # ← add this line
+            traceback.print_exc()
             return Response(
                 {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -339,10 +340,8 @@ class PredictView(APIView):
 
         try:
             df = pd.DataFrame(rows)
-
             ml_service = MLAnalysisService()
             ml_output = ml_service.run(df)
-
             return Response(ml_output)
 
         except Exception as e:
@@ -357,18 +356,6 @@ class BatchReportListView(APIView):
         reports = BatchAnalysisReport.objects.filter(owner=request.user)
         serializer = BatchAnalysisReportSerializer(reports, many=True)
         return Response(serializer.data)
-
-
-class BatchReportDetailView(APIView):
-    def get(self, request, pk):
-        try:
-            report = BatchAnalysisReport.objects.get(pk=pk, owner=request.user)
-            serializer = BatchAnalysisReportSerializer(report)
-            return Response(serializer.data)
-        except BatchAnalysisReport.DoesNotExist:
-            return Response(
-                {"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND
-            )
 
 
 class AnalysePatientView(APIView):
@@ -397,7 +384,7 @@ class AnalysePatientView(APIView):
         results = {}
         errors = {}
 
-        # 1. Rule-based — always works on single row
+        # 1. Rule-based
         try:
             rule_predictor = RuleBasedPredictor()
             rule_predictor.fit(df)
@@ -407,26 +394,23 @@ class AnalysePatientView(APIView):
                 "model_info": rule_predictor.get_model_info(),
             }
             pred = preds[0]
-            AnalysisResult.objects.update_or_create(
+            AnalysisResult.objects.create(
                 patient=patient,
                 model_type="rule_based",
-                defaults={
-                    "result": pred,
-                    "confidence": pred.get("confidence"),
-                    "risk_label": pred.get("risk_label", ""),
-                    "notes": "Single patient analysis",
-                },
+                result=pred,
+                confidence=pred.get("confidence"),
+                risk_label=pred.get("risk_label", ""),
+                notes="Single patient analysis",
             )
         except Exception as e:
             errors["rule_based"] = str(e)
 
-        # 2. Logistic Regression — derive result directly from metrics
+        # 2. Logistic Regression
         try:
             glucose = row["glucose_level"]
             bmi = row["bmi"]
             is_diabetic_flag = patient.is_diabetic
 
-            # Score-based probability proxy for single patient
             score = 0
             if glucose > 125:
                 score += 3
@@ -463,20 +447,18 @@ class AnalysePatientView(APIView):
                     "note": "Score-based proxy — batch upload trains full model",
                 },
             }
-            AnalysisResult.objects.update_or_create(
+            AnalysisResult.objects.create(
                 patient=patient,
                 model_type="logistic",
-                defaults={
-                    "result": pred,
-                    "confidence": prob_diabetic,
-                    "risk_label": prediction,
-                    "notes": "Single patient analysis",
-                },
+                result=pred,
+                confidence=max(prob_diabetic, prob_non),
+                risk_label=prediction,
+                notes="Single patient analysis",
             )
         except Exception as e:
             errors["disease_prediction"] = str(e)
 
-        # 3. Decision Tree — derive risk label directly from metrics
+        # 3. Decision Tree
         try:
             score = 0
             if row["glucose_level"] > 125:
@@ -515,18 +497,97 @@ class AnalysePatientView(APIView):
                     "note": "Score-based proxy — batch upload trains full model",
                 },
             }
-            AnalysisResult.objects.update_or_create(
+            AnalysisResult.objects.create(
                 patient=patient,
                 model_type="decision_tree",
-                defaults={
-                    "result": pred,
-                    "confidence": confidence,
-                    "risk_label": risk_label,
-                    "notes": "Single patient analysis",
-                },
+                result=pred,
+                confidence=confidence,
+                risk_label=risk_label,
+                notes="Single patient analysis",
             )
         except Exception as e:
             errors["diagnosis_tree"] = str(e)
+
+        # 4. Linear Regression proxy
+        try:
+            sys_bp = row["blood_pressure_systolic"]
+            age = row["age"]
+            bmi = row["bmi"]
+            predicted_bp = round(sys_bp * 0.6 + age * 0.3 + bmi * 0.2, 1)
+
+            bp_risk = (
+                "HIGH"
+                if predicted_bp > 140
+                else "MEDIUM" if predicted_bp > 120 else "LOW"
+            )
+            bp_conf = round(min(abs(predicted_bp - 120) / 60, 1.0), 4)
+
+            pred = {"predicted_systolic_bp": predicted_bp}
+            results["trend_prediction"] = {
+                "predictions": [
+                    {
+                        "value": predicted_bp,
+                        "patient_name": f"{patient.first_name} {patient.last_name}",
+                    }
+                ],
+                "model_info": {
+                    "model": "TrendPredictor",
+                    "algorithm": "Linear Regression (single-patient proxy)",
+                },
+            }
+            AnalysisResult.objects.create(
+                patient=patient,
+                model_type="linear_regression",
+                result=pred,
+                confidence=None,
+                risk_label=bp_risk,
+                notes="Single patient analysis",
+            )
+        except Exception as e:
+            errors["trend_prediction"] = str(e)
+
+        # 5. KMeans proxy
+        try:
+            score = 0
+            if row["bmi"] > 30:
+                score += 1
+            if row["blood_pressure_systolic"] > 135:
+                score += 1
+            if row["glucose_level"] > 125:
+                score += 1
+            if row["is_smoker"]:
+                score += 1
+            if row["has_hypertension"]:
+                score += 1
+
+            cluster_id = min(score // 2, 2)
+            profile = ["Low Risk", "Moderate Risk", "High Risk"][cluster_id]
+            cluster_confidence = round(0.5 + cluster_id * 0.2, 4)
+
+            pred = {"cluster_id": cluster_id, "profile": profile}
+            results["clustering"] = {
+                "predictions": [
+                    {
+                        "cluster_id": cluster_id,
+                        "profile": profile,
+                        "patient_name": f"{patient.first_name} {patient.last_name}",
+                    }
+                ],
+                "model_info": {
+                    "model": "PatientClusterer",
+                    "algorithm": "KMeans (single-patient proxy)",
+                },
+            }
+            AnalysisResult.objects.create(
+                patient=patient,
+                model_type="kmeans",
+                result=pred,
+                confidence=None,
+                risk_label=profile,
+                notes="Single patient analysis",
+            )
+        except Exception as e:
+            errors["clustering"] = str(e)
 
         return Response(
             {
@@ -552,7 +613,6 @@ class BatchReportDetailView(APIView):
                 {"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-    # Add this delete method to the existing class
     def delete(self, request, pk):
         try:
             report = BatchAnalysisReport.objects.get(pk=pk, owner=request.user)

@@ -22,7 +22,7 @@ class MedicalRecord(BaseHealthEntity):
     blood_pressure_diastolic = models.FloatField(null=True, blank=True)
     heart_rate = models.FloatField(null=True, blank=True)
     glucose_level = models.FloatField(null=True, blank=True)
-    weight = models.FloatField(null=True, blank=True)
+    bmi = models.FloatField(null=True, blank=True)
     temperature = models.FloatField(null=True, blank=True)
 
     class Meta:

@@ -13,7 +13,6 @@ warnings.filterwarnings("ignore")
 
 from patients.services.base import BasePredictor
 
-
 # ──────────────────────────────────────────────
 # 1. TrendPredictor — Linear Regression
 # ──────────────────────────────────────────────
@@ -42,10 +41,11 @@ class TrendPredictor(BasePredictor):
         self.r2_score = round(r2_score(y, preds), 4)
         self.is_fitted = True
 
-    def predict(self, X: pd.DataFrame) -> List[float]:
+    def predict(self, X: pd.DataFrame) -> List[Dict]:
         self._check_fitted()
         features = self._select_features(X, self.feature_columns)
-        return self.model.predict(features).tolist()
+        predictions = self.model.predict(features).tolist()
+        return [{"predicted_bp": round(p, 2), "confidence": None} for p in predictions]
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
@@ -106,6 +106,7 @@ class PatientClusterer(BasePredictor):
             {
                 "cluster_id": cid,
                 "profile": self.CLUSTER_LABELS.get(cid, f"Cluster {cid}"),
+                "confidence": None,
             }
             for cid in cluster_ids
         ]
@@ -440,7 +441,7 @@ class RuleBasedPredictor(BasePredictor):
             "risk_label": risk_label,
             "risk_score": deduped_score,
             "triggered_rules": deduped_reasons,
-            "confidence": round(min(deduped_score / 6.0, 1.0), 4),
+            "confidence": 1.0,
         }
 
     def predict(self, X: pd.DataFrame) -> List[Dict]:
