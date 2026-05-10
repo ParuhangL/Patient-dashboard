@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const client = axios.create({
-  baseURL: 'https://patient-dashboard-api.onrender.com',
+  baseURL: 'https://patient-dashboard-api.onrender.com/api',
   timeout: 30000,
   headers: { 'Content-Type': 'application/json' },
 })
