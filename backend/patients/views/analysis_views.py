@@ -214,7 +214,7 @@ class AnalyseView(APIView):
                         patient.save()
                         linked_count += 1
                     else:
-                        Patient.objects.create(owner=request.user, **fields)
+                        patient = Patient.objects.create(owner=request.user, **fields)
                         created_count += 1
 
                 # ---------------- Save ML Results ----------------
