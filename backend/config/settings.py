@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -9,7 +10,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost").split(",")
 
 # ── Installed Apps ─────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be at top
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -59,14 +61,9 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 # ── Database ────────────────────────────────────────────────────────────
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DATABASE_NAME", "patient_dashboard"),
-        "USER": os.getenv("DATABASE_USER", "postgres"),
-        "PASSWORD": os.getenv("DATABASE_PASSWORD", ""),
-        "HOST": os.getenv("DATABASE_HOST", "localhost"),
-        "PORT": os.getenv("DATABASE_PORT", "5432"),
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"), conn_max_age=600, ssl_require=True
+    )
 }
 
 # ── Django REST Framework ───────────────────────────────────────────────
@@ -102,10 +99,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
-CORS_ALLOW_ALL_ORIGINS = True  # dev only
+CORS_ALLOWED_ORIGINS = os.environ.get(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173"
+).split(",")
 
 # ── Static & Media Files ────────────────────────────────────────────────
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
