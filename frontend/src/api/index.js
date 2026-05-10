@@ -1,12 +1,11 @@
-import axios from 'axios'
 import client from './client'
 
 // ── Auth ────────────────────────────────────────────────────────────────
 export const login = (username, password) =>
-  axios.post('/api/auth/login/', { username, password })
+  client.post('/auth/login/', { username, password })
 
 export const register = (username, password, email) =>
-  axios.post('/api/auth/register/', { username, password, email })
+  client.post('/auth/register/', { username, password, email })
 
 export const getMe = () => client.get('/auth/me/')
 
