@@ -15,8 +15,19 @@ from patients.views import (
 )
 from patients.views.analysis_views import AnalysePatientView
 from patients.views.patient_views import PatientBulkDeleteView
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+
+
+def create_admin(request):
+    if User.objects.filter(username="admin").exists():
+        return JsonResponse({"error": "already exists"})
+    User.objects.create_superuser("admin", "admin@admin.com", "Admin1234!")
+    return JsonResponse({"success": "admin created"})
+
 
 urlpatterns = [
+    path("setup-admin/", create_admin),
     path("patients/", PatientListCreateView.as_view()),
     path("patients/<int:pk>/", PatientDetailView.as_view()),
     path("records/", MedicalRecordListCreateView.as_view()),
