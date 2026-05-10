@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import client from '../api/client'
+
 
 export default function AdminLogin() {
   const [form, setForm] = useState({ username: '', password: '' })
@@ -11,16 +13,7 @@ export default function AdminLogin() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/admin/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || 'Login failed')
-        return
-      }
+      const { data } = await client.post('/admin/login/', form)
       localStorage.setItem('adminToken', data.access)
       localStorage.setItem('adminUser', JSON.stringify(data.user))
       navigate('/admin-panel')

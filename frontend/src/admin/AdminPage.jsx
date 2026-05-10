@@ -1,18 +1,26 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 
-const BASE = '/api/admin'
+const adminClient = axios.create({
+  baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin`,
+  headers: { 'Content-Type': 'application/json' },
+})
 
-function adminFetch(path, options = {}) {
+adminClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('adminToken')
-  return fetch(`${BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
-  })
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
+async function adminFetch(path, options = {}) {
+  const method = (options.method || 'GET').toLowerCase()
+  const body = options.body ? JSON.parse(options.body) : undefined
+  const res = await adminClient[method](path, body)
+  return {
+    json: () => Promise.resolve(res.data),
+    ok: res.status >= 200 && res.status < 300,
+  }
 }
 
 function StatCard({ label, value, sub, color = '#3b82f6' }) {
