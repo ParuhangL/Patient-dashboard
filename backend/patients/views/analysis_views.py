@@ -200,6 +200,13 @@ class AnalyseView(APIView):
                         patient.save()
                         linked_count += 1
                 else:
+                    # No email — match by first_name + last_name + date_of_birth
+                    patient = Patient.objects.filter(
+                        owner=request.user,
+                        first_name=fields.get("first_name", ""),
+                        last_name=fields.get("last_name", ""),
+                        date_of_birth=fields.get("date_of_birth"),
+                    ).first()
                     if patient:
                         for attr, val in fields.items():
                             if val not in (None, ""):
@@ -207,7 +214,7 @@ class AnalyseView(APIView):
                         patient.save()
                         linked_count += 1
                     else:
-                        patient = Patient.objects.create(owner=request.user, **fields)
+                        Patient.objects.create(owner=request.user, **fields)
                         created_count += 1
 
                 # ---------------- Save ML Results ----------------
