@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import client from '../api/client'
+import axios from 'axios'
 
 
 export default function AdminLogin() {
@@ -13,12 +13,16 @@ export default function AdminLogin() {
     setLoading(true)
     setError(null)
     try {
-      const { data } = await client.post('/admin/login/', form)
-      localStorage.setItem('adminToken', data.access)
-      localStorage.setItem('adminUser', JSON.stringify(data.user))
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/login/`,
+        form,
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+      localStorage.setItem('adminToken', res.data.access)
+      localStorage.setItem('adminUser', JSON.stringify(res.data.user))
       navigate('/admin-panel')
-    } catch {
-      setError('Could not connect to server')
+    } catch (error) {
+      setError(error.response?.data?.error || 'Invalid credentials')
     } finally {
       setLoading(false)
     }

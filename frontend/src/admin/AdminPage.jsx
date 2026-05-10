@@ -14,12 +14,23 @@ adminClient.interceptors.request.use((config) => {
 })
 
 async function adminFetch(path, options = {}) {
-  const method = (options.method || 'GET').toLowerCase()
-  const body = options.body ? JSON.parse(options.body) : undefined
-  const res = await adminClient[method](path, body)
-  return {
-    json: () => Promise.resolve(res.data),
-    ok: res.status >= 200 && res.status < 300,
+  try {
+    const method = (options.method || 'GET').toLowerCase()
+    const body = options.body ? JSON.parse(options.body) : undefined
+    const res = await adminClient[method](path, body)
+    return {
+      json: () => Promise.resolve(res.data),
+      ok: true,
+      status: res.status,
+    }
+  } catch (error) {
+    const status = error.response?.status || 500
+    const data = error.response?.data || {}
+    return {
+      json: () => Promise.resolve(data),
+      ok: false,
+      status,
+    }
   }
 }
 
