@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
 const adminClient = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin`,
+  baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/admin`,
   headers: { 'Content-Type': 'application/json' },
 })
 

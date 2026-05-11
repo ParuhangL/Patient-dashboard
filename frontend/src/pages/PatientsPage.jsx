@@ -3,7 +3,7 @@ import { getPatients, getAllPatients, getPatient, getRecords, getPatientAnalyses
 import { Search, ChevronLeft, ChevronRight, X, Download, Pencil, Trash2, Save, AlertTriangle, PlusCircle, CheckCircle, RefreshCw, FileText } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts'
 import { createPortal } from 'react-dom'
 
@@ -28,66 +28,142 @@ function BPTrendChart({ records }) {
     return <div style={{ fontSize: 13, color: '#64748b', padding: '16px 0' }}>No medical records available for BP trend.</div>
 
   const data = [...records]
-    .sort((a, b) => new Date(a.visit_date) - new Date(b.visit_date))
-    .map(r => ({
-      date: new Date(r.visit_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      systolic: r.blood_pressure_systolic ?? null,
-      diastolic: r.blood_pressure_diastolic ?? null,
+    .filter(r => r.patient === records[0]?.patient) // safety: only current patient's records
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    .map((r, i) => ({
+      date: new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+            (records.filter(x => x.visit_date === r.visit_date).length > 1
+              ? ` #${i + 1}`
+              : ''),
+      Systolic: r.blood_pressure_systolic ?? null,
+      Diastolic: r.blood_pressure_diastolic ?? null,
     }))
-    .filter(r => r.systolic !== null || r.diastolic !== null)
+    .filter(r => r.Systolic !== null || r.Diastolic !== null)
 
   if (data.length === 0)
     return <div style={{ fontSize: 13, color: '#64748b', padding: '16px 0' }}>No BP data in medical records.</div>
 
+  const allValues = data.flatMap(d => [d.Systolic, d.Diastolic]).filter(v => v !== null)
+  const minVal = Math.max(40, Math.floor(Math.min(...allValues) / 10) * 10 - 10)
+  const maxVal = Math.ceil(Math.max(...allValues) / 10) * 10 + 10
+
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-        <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} />
-        <YAxis tick={{ fill: '#64748b', fontSize: 11 }} domain={['auto', 'auto']} unit=" mmHg" />
-        <Tooltip
-          contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
-          labelStyle={{ color: '#e2e8f0' }}
-          formatter={(v, name) => [`${v} mmHg`, name === 'systolic' ? 'Systolic' : 'Diastolic']}
-        />
-        <Legend formatter={val => val === 'systolic' ? 'Systolic' : 'Diastolic'} wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
-        <Line type="monotone" dataKey="systolic" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5 }} connectNulls />
-        <Line type="monotone" dataKey="diastolic" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3, fill: '#06b6d4' }} activeDot={{ r: 5 }} connectNulls />
-      </LineChart>
-    </ResponsiveContainer>
+    <div style={{ width: '100%' }}>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 8, paddingLeft: 8 }}>
+        <span style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ display: 'inline-block', width: 24, height: 2, background: '#3b82f6', borderRadius: 2 }} />
+          Systolic
+        </span>
+        <span style={{ fontSize: 12, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ display: 'inline-block', width: 24, height: 2, background: '#06b6d4', borderRadius: 2 }} />
+          Diastolic
+        </span>
+      </div>
+
+      <ResponsiveContainer width="100%" height={200}>
+        <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
+
+          <XAxis
+            dataKey="date"
+            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            interval="preserveStartEnd"
+            tickLine={false}
+          />
+
+          <YAxis
+            domain={[minVal, maxVal]}
+            tick={{ fill: '#94a3b8', fontSize: 11 }}
+            tickFormatter={v => `${v}`}
+            width={40}
+            tickLine={false}
+            axisLine={false}
+          />
+
+          <Tooltip
+            contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8, fontSize: 12 }}
+            labelStyle={{ color: '#e2e8f0', fontWeight: 600, marginBottom: 4 }}
+            formatter={(value, name) => [`${value} mmHg`, name]}
+            itemSorter={item => item.dataKey === 'Systolic' ? 0 : 1}
+          />
+
+          <Line
+            type="monotone"
+            dataKey="Systolic"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            dot={{ r: 4, fill: '#3b82f6', strokeWidth: 0 }}
+            activeDot={{ r: 6, stroke: '#fff', strokeWidth: 1 }}
+            connectNulls
+          />
+          <Line
+            type="monotone"
+            dataKey="Diastolic"
+            stroke="#06b6d4"
+            strokeWidth={2}
+            dot={{ r: 4, fill: '#06b6d4', strokeWidth: 0 }}
+            activeDot={{ r: 6, stroke: '#fff', strokeWidth: 1 }}
+            connectNulls
+          />
+        </LineChart>
+      </ResponsiveContainer>
+
+      <div style={{ textAlign: 'center', fontSize: 11, color: '#64748b', marginTop: 4 }}>Visit Date</div>
+      <div style={{ textAlign: 'left', fontSize: 11, color: '#64748b', marginTop: 2, paddingLeft: 4 }}>mmHg</div>
+    </div>
   )
 }
 
 function RiskTrendChart({ analyses }) {
   const RISK_SCORE = { LOW: 1, MEDIUM: 2, HIGH: 3 }
   const RISK_COLOR = { 1: '#10b981', 2: '#f59e0b', 3: '#ef4444' }
-  const RISK_LABEL = { 1: 'LOW', 2: 'MEDIUM', 3: 'HIGH' }
+  const RISK_LABEL = { 1: 'Low', 2: 'Mid', 3: 'High' }
+  const RISK_LABEL_FULL = { 1: 'LOW', 2: 'MEDIUM', 3: 'HIGH' }
 
-  const data = [...analyses]
+  const sorted = [...analyses]
     .filter(a => a.risk_label && a.model_type === 'rule_based')
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-    .map(a => ({
-      date: new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+
+  // Group by date to detect same-day duplicates
+  const dateCounts = {}
+  sorted.forEach(a => {
+    const d = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    dateCounts[d] = (dateCounts[d] || 0) + 1
+  })
+  const dateIndex = {}
+  const data = sorted.map(a => {
+    const d = new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    dateIndex[d] = (dateIndex[d] || 0) + 1
+    const label = dateCounts[d] > 1 ? `${d} #${dateIndex[d]}` : d
+    return {
+      date: label,
       score: RISK_SCORE[a.risk_label] ?? null,
-    }))
+    }
+  })
 
   if (data.length < 2)
     return <div style={{ fontSize: 13, color: '#64748b', padding: '12px 0' }}>Not enough analyses yet — re-analyse after editing metrics to build a trend.</div>
 
   return (
-    <ResponsiveContainer width="100%" height={160}>
-      <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
+    <ResponsiveContainer width="100%" height={180}>
+      <LineChart data={data} margin={{ top: 8, right: 16, left: 16, bottom: 8 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-        <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} />
+        <XAxis
+          dataKey="date"
+          tick={{ fill: '#64748b', fontSize: 10 }}
+          interval="preserveStartEnd"
+        />
         <YAxis
-          domain={[0.5, 3.5]} ticks={[1, 2, 3]}
+          domain={[0.5, 3.5]}
+          ticks={[1, 2, 3]}
+          width={36}
           tick={{ fill: '#64748b', fontSize: 11 }}
           tickFormatter={v => RISK_LABEL[v] ?? ''}
         />
         <Tooltip
           contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
           labelStyle={{ color: '#e2e8f0' }}
-          formatter={v => [RISK_LABEL[v], 'Risk Level']}
+          formatter={v => [RISK_LABEL_FULL[v], 'Risk Level']}
         />
         <Line
           type="stepAfter"
@@ -162,10 +238,18 @@ function exportPatientPDF(patient, records, analyses) {
   const analysisRows = analyses.map(a => {
     const rc = a.risk_label === 'HIGH' ? '#ef4444' : a.risk_label === 'MEDIUM' ? '#f59e0b' : '#10b981'
     const rb = a.risk_label === 'HIGH' ? '#fee2e2' : a.risk_label === 'MEDIUM' ? '#fef3c7' : '#d1fae5'
+    const detail = a.model_type === 'linear_regression' && a.result?.predicted_systolic_bp != null
+      ? `SBP: ${a.result.predicted_systolic_bp} mmHg${a.result?.predicted_diastolic_bp != null ? ` · DBP: ${a.result.predicted_diastolic_bp} mmHg` : ''}`
+      : a.model_type === 'logistic' && a.result?.prediction
+      ? a.result.prediction
+      : a.model_type === 'kmeans' && a.result?.profile
+      ? a.result.profile
+      : '—'
     return `<tr>
       <td style="padding:8px 10px;font-size:12px">${a.model_type.replace('_',' ').toUpperCase()}</td>
       <td style="padding:8px 10px">${a.risk_label ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:${rb};color:${rc}">${a.risk_label}</span>` : '—'}</td>
       <td style="padding:8px 10px;font-size:12px">${a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}</td>
+      <td style="padding:8px 10px;font-size:12px;color:#475569">${detail}</td>
       <td style="padding:8px 10px;font-size:12px;color:#475569">${new Date(a.created_at).toLocaleDateString()}</td>
       <td style="padding:8px 10px;font-size:12px;color:#475569">${a.notes || '—'}</td>
     </tr>`
@@ -366,14 +450,29 @@ function EditPatientForm({ patient, onSave, onCancel }) {
       </div>
 
       {sectionLabel('Health Metrics')}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-        <Field label="Systolic BP (mmHg)" name="blood_pressure_systolic" type="number" value={form.blood_pressure_systolic} onChange={handleChange} />
-        <Field label="Diastolic BP (mmHg)" name="blood_pressure_diastolic" type="number" value={form.blood_pressure_diastolic} onChange={handleChange} />
-        <Field label="Heart Rate (bpm)" name="heart_rate" type="number" value={form.heart_rate} onChange={handleChange} />
-        <Field label="Glucose (mg/dL)" name="glucose_level" type="number" value={form.glucose_level} onChange={handleChange} />
-        <Field label="BMI" name="bmi" type="number" value={form.bmi} onChange={handleChange} />
-        <Field label="Cholesterol (mg/dL)" name="cholesterol" type="number" value={form.cholesterol} onChange={handleChange} />
-      </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <Field label="Systolic BP (mmHg)" name="blood_pressure_systolic" type="number" value={form.blood_pressure_systolic} onChange={handleChange} />
+              <Field label="Diastolic BP (mmHg)" name="blood_pressure_diastolic" type="number" value={form.blood_pressure_diastolic} onChange={handleChange} />
+              <Field label="Heart Rate (bpm)" name="heart_rate" type="number" value={form.heart_rate} onChange={handleChange} />
+              <Field label="Glucose (mg/dL)" name="glucose_level" type="number" value={form.glucose_level} onChange={handleChange} />
+              <Field label="BMI" name="bmi" type="number" value={form.bmi} onChange={handleChange} />
+              <Field label="Cholesterol (mg/dL)" name="cholesterol" type="number" value={form.cholesterol} onChange={handleChange} />
+            </div>
+            <div style={{
+              marginTop: 8,
+              padding: '8px 12px',
+              background: '#1e2d1e',
+              border: '1px solid #2d4a2d',
+              borderRadius: 8,
+              fontSize: 12,
+              color: '#86efac',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <span>💡</span>
+              <span>Editing vitals here updates the patient's baseline but won't appear in the BP Trend chart. To track a BP change over time, use <strong>Add Visit</strong> instead.</span>
+            </div>
 
       {sectionLabel('Lifestyle')}
       <div style={{ display: 'flex', gap: 24 }}>
@@ -1026,7 +1125,7 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted }
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #2a3347' }}>
-                    {['Model', 'Risk Label', 'Confidence', 'Date', 'Notes'].map(h => (
+                    {['Model', 'Risk Label', 'Confidence', 'Detail', 'Date', 'Notes'].map(h => (
                       <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
                     ))}
                   </tr>
@@ -1044,6 +1143,26 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted }
                       </td>
                       <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0' }}>
                         {a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}
+                      </td>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#94a3b8' }}>
+                        {a.model_type === 'linear_regression' && a.result?.predicted_systolic_bp != null ? (
+                          <span>
+                            SBP: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{a.result.predicted_systolic_bp} mmHg</span>
+                            {a.result?.predicted_diastolic_bp != null && (
+                              <span> · DBP: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{a.result.predicted_diastolic_bp} mmHg</span></span>
+                            )}    
+                          </span>
+                        ) : a.model_type === 'logistic' && a.result?.prediction ? (
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                            background: a.result.prediction === 'Diabetic' ? '#7f1d1d' : '#064e3b',
+                            color: a.result.prediction === 'Diabetic' ? '#fca5a5' : '#6ee7b7',
+                          }}>{a.result.prediction}</span>
+                        ) : a.model_type === 'kmeans' && a.result?.profile ? (
+                          <span style={{ fontSize: 12, color: '#94a3b8' }}>{a.result.profile}</span>
+                        ) : (
+                          <span style={{ color: '#475569' }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569' }}>
                         {new Date(a.created_at).toLocaleDateString()}

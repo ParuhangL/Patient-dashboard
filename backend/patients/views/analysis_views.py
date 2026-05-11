@@ -8,6 +8,7 @@ from patients.serializers import BatchAnalysisReportSerializer
 import pandas as pd
 import traceback
 from patients.services.ml_service import MLAnalysisService, RuleBasedPredictor
+from datetime import date
 
 
 class DataUploadView(APIView):
@@ -271,7 +272,11 @@ class AnalyseView(APIView):
                 # Linear Regression (Trend Prediction)
                 if idx < len(trend_preds):
                     pred = trend_preds[idx]
-                    val = pred.get("predicted_bp") if isinstance(pred, dict) else pred
+                    val = (
+                        pred.get("predicted_systolic_bp") or pred.get("predicted_bp")
+                        if isinstance(pred, dict)
+                        else pred
+                    )
                     bp_risk = (
                         "HIGH"
                         if (val or 0) > 140
@@ -282,7 +287,14 @@ class AnalyseView(APIView):
                         model_type="linear_regression",
                         notes=f"Batch upload: {file.name}",
                         defaults={
-                            "result": {"predicted_systolic_bp": val},
+                            "result": {
+                                "predicted_systolic_bp": val,
+                                "predicted_diastolic_bp": (
+                                    pred.get("predicted_diastolic_bp")
+                                    if isinstance(pred, dict)
+                                    else None
+                                ),
+                            },
                             "confidence": None,
                             "risk_label": bp_risk,
                         },
@@ -374,19 +386,31 @@ class AnalysePatientView(APIView):
                 {"error": "Patient not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        row = {
-            "age": patient.age or 0,
-            "blood_pressure_systolic": patient.blood_pressure_systolic or 0,
-            "blood_pressure_diastolic": patient.blood_pressure_diastolic or 0,
-            "heart_rate": patient.heart_rate or 0,
-            "glucose_level": patient.glucose_level or 0,
-            "bmi": float(patient.bmi) if patient.bmi else 0,
-            "cholesterol": patient.cholesterol or 0,
-            "is_smoker": int(patient.is_smoker),
-            "is_diabetic": int(patient.is_diabetic),
-            "has_hypertension": int(patient.has_hypertension),
-        }
-        df = pd.DataFrame([row])
+        try:
+            row = {
+                "age": (
+                    (date.today().year - patient.date_of_birth.year)
+                    if patient.date_of_birth
+                    else 0
+                ),
+                "blood_pressure_systolic": patient.blood_pressure_systolic or 0,
+                "blood_pressure_diastolic": patient.blood_pressure_diastolic or 0,
+                "heart_rate": patient.heart_rate or 0,
+                "glucose_level": patient.glucose_level or 0,
+                "bmi": float(patient.bmi) if patient.bmi else 0,
+                "cholesterol": patient.cholesterol or 0,
+                "is_smoker": int(patient.is_smoker),
+                "is_diabetic": int(patient.is_diabetic),
+                "has_hypertension": int(patient.has_hypertension),
+            }
+            df = pd.DataFrame([row])
+        except Exception as e:
+            import traceback
+
+            traceback.print_exc()
+            return Response(
+                {"error": f"Failed to build patient row: {str(e)}"}, status=500
+            )
 
         results = {}
         errors = {}
@@ -472,7 +496,11 @@ class AnalysePatientView(APIView):
                 score += 1
             if row["bmi"] > 30:
                 score += 1
-            if row["blood_pressure_systolic"] > 135:
+            if row["blood_pressure_systolic"] > 140:  # was 135
+                score += 1
+            if row["blood_pressure_diastolic"] > 90:  # new
+                score += 1
+            if row["heart_rate"] > 100:  # new
                 score += 1
             if row["is_smoker"]:
                 score += 1
@@ -517,10 +545,41 @@ class AnalysePatientView(APIView):
 
         # 4. Linear Regression proxy
         try:
-            sys_bp = row["blood_pressure_systolic"]
             age = row["age"]
             bmi = row["bmi"]
-            predicted_bp = round(sys_bp * 0.6 + age * 0.3 + bmi * 0.2, 1)
+
+            base_bp = 95
+            age_factor = age * 0.4
+            bmi_factor = (bmi - 18.5) * 0.8 if bmi > 18.5 else 0
+            hypertension_factor = 15 if row["has_hypertension"] else 0
+            smoker_factor = 5 if row["is_smoker"] else 0
+            glucose_factor = 10 if row["glucose_level"] > 125 else 0
+
+            predicted_bp = round(
+                base_bp
+                + age_factor
+                + bmi_factor
+                + hypertension_factor
+                + smoker_factor
+                + glucose_factor,
+                1,
+            )
+
+            predicted_dbp = round(
+                (
+                    60  # healthy diastolic baseline
+                    + age * 0.2  # age contributes less to diastolic
+                    + (bmi - 18.5) * 0.5
+                    if bmi > 18.5
+                    else 0  # BMI effect
+                    + (
+                        8 if row["has_hypertension"] else 0
+                    )  # hypertension raises diastolic
+                    + (3 if row["is_smoker"] else 0)  # smoking effect
+                    + (5 if row["glucose_level"] > 125 else 0)
+                ),  # glucose effect
+                1,
+            )
 
             bp_risk = (
                 "HIGH"
@@ -529,11 +588,16 @@ class AnalysePatientView(APIView):
             )
             bp_conf = round(min(abs(predicted_bp - 120) / 60, 1.0), 4)
 
-            pred = {"predicted_systolic_bp": predicted_bp}
+            pred = {
+                "predicted_systolic_bp": predicted_bp,
+                "predicted_diastolic_bp": predicted_dbp,
+            }
             results["trend_prediction"] = {
                 "predictions": [
                     {
                         "value": predicted_bp,
+                        "predicted_systolic_bp": predicted_bp,
+                        "predicted_diastolic_bp": predicted_dbp,
                         "patient_name": f"{patient.first_name} {patient.last_name}",
                     }
                 ],

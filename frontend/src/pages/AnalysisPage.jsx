@@ -69,12 +69,23 @@ function ResultDetail({ result, modelType }) {
   }
 
   if (modelType === 'linear_regression') {
+    const sbp = result.predicted_systolic_bp ?? result.predicted_bp
+    const dbp = result.predicted_diastolic_bp
     return (
-      <span style={{ fontSize: 12, color: '#94a3b8' }}>
-        Predicted BP: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
-          {result.predicted_systolic_bp != null ? `${result.predicted_systolic_bp} mmHg` : '—'}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>
+          Systolic: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+            {sbp != null ? `${sbp} mmHg` : '—'}
+          </span>
         </span>
-      </span>
+        {dbp != null && (
+          <span style={{ fontSize: 12, color: '#94a3b8' }}>
+            Diastolic: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+              {`${dbp} mmHg`}
+            </span>
+          </span>
+        )}
+      </div>
     )
   }
 

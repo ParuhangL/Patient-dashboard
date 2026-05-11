@@ -14,7 +14,7 @@ export default function AdminLogin() {
     setError(null)
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/login/`,
+        `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/admin/login/`,
         form,
         { headers: { 'Content-Type': 'application/json' } }
       )

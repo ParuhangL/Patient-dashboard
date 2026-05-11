@@ -27,7 +27,9 @@ class TrendPredictor(BasePredictor):
     def __init__(self):
         super().__init__(model_name="TrendPredictor")
         self.model = LinearRegression()
+        self.model_dbp = LinearRegression()
         self.r2_score = None
+        self.r2_score_dbp = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         features = self._select_features(X, ["age"])
@@ -36,16 +38,37 @@ class TrendPredictor(BasePredictor):
                 "TrendPredictor requires 'age' column and a target series."
             )
         self.feature_columns = list(features.columns)
+        # Systolic
         self.model.fit(features, y)
         preds = self.model.predict(features)
         self.r2_score = round(r2_score(y, preds), 4)
+        # Diastolic
+        if "blood_pressure_diastolic" in X.columns:
+            self.model_dbp.fit(features, X["blood_pressure_diastolic"])
+            preds_dbp = self.model_dbp.predict(features)
+            self.r2_score_dbp = round(
+                r2_score(X["blood_pressure_diastolic"], preds_dbp), 4
+            )
         self.is_fitted = True
 
     def predict(self, X: pd.DataFrame) -> List[Dict]:
         self._check_fitted()
         features = self._select_features(X, self.feature_columns)
-        predictions = self.model.predict(features).tolist()
-        return [{"predicted_bp": round(p, 2), "confidence": None} for p in predictions]
+        sbp_preds = self.model.predict(features).tolist()
+        dbp_preds = (
+            self.model_dbp.predict(features).tolist()
+            if self.r2_score_dbp is not None
+            else [None] * len(sbp_preds)
+        )
+        return [
+            {
+                "predicted_bp": round(sbp, 2),
+                "predicted_systolic_bp": round(sbp, 2),
+                "predicted_diastolic_bp": round(dbp, 2) if dbp is not None else None,
+                "confidence": None,
+            }
+            for sbp, dbp in zip(sbp_preds, dbp_preds)
+        ]
 
     def get_model_info(self) -> Dict[str, Any]:
         return {
@@ -323,6 +346,30 @@ class RuleBasedPredictor(BasePredictor):
             "reason": "Systolic BP 120–139 mmHg (elevated)",
         },
         {
+            "name": "High Diastolic BP",
+            "column": "blood_pressure_diastolic",
+            "threshold": 90,
+            "operator": ">",
+            "risk_contribution": 2,
+            "reason": "Diastolic BP > 90 mmHg (hypertensive range)",
+        },
+        {
+            "name": "Elevated Diastolic BP",
+            "column": "blood_pressure_diastolic",
+            "threshold": 80,
+            "operator": ">",
+            "risk_contribution": 1,
+            "reason": "Diastolic BP 80–90 mmHg (elevated)",
+        },
+        {
+            "name": "High Heart Rate",
+            "column": "heart_rate",
+            "threshold": 100,
+            "operator": ">",
+            "risk_contribution": 1,
+            "reason": "Heart rate > 100 bpm (tachycardia)",
+        },
+        {
             "name": "Obese BMI",
             "column": "bmi",
             "threshold": 30,
@@ -339,12 +386,20 @@ class RuleBasedPredictor(BasePredictor):
             "reason": "BMI 25–29.9 (overweight)",
         },
         {
-            "name": "High Cholesterol",
+            "name": "Very High Cholesterol",
+            "column": "cholesterol",
+            "threshold": 240,
+            "operator": ">",
+            "risk_contribution": 2,
+            "reason": "Cholesterol > 240 mg/dL (high)",
+        },
+        {
+            "name": "Borderline Cholesterol",
             "column": "cholesterol",
             "threshold": 200,
             "operator": ">",
             "risk_contribution": 1,
-            "reason": "Cholesterol > 200 mg/dL (borderline high)",
+            "reason": "Cholesterol 200–240 mg/dL (borderline high)",
         },
         {
             "name": "Smoker",

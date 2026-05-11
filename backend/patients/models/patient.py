@@ -52,16 +52,6 @@ class Patient(BaseHealthEntity):
         return f"{self.first_name} {self.last_name}"
 
     @property
-    def age(self):
-        from datetime import date
-
-        today = date.today()
-        born = self.date_of_birth
-        return (today.year - born.year) - (
-            (today.month, today.day) < (born.month, born.day)
-        )
-
-    @property
     def risk_level(self):
         score = 0
         if self.blood_pressure_systolic:
@@ -69,18 +59,32 @@ class Patient(BaseHealthEntity):
                 score += 2
             elif self.blood_pressure_systolic >= 130:
                 score += 1
+
+        if self.blood_pressure_diastolic:
+            if self.blood_pressure_diastolic >= 90:
+                score += 2
+            elif self.blood_pressure_diastolic >= 80:
+                score += 1
+
+        if self.heart_rate:
+            if self.heart_rate >= 100:
+                score += 1
+
         if self.glucose_level:
             if self.glucose_level >= 126:
                 score += 2
             elif self.glucose_level >= 100:
                 score += 1
+
         if self.bmi and self.bmi >= 30:
             score += 1
+
         if self.cholesterol:
             if self.cholesterol >= 240:
                 score += 2
             elif self.cholesterol >= 200:
                 score += 1
+
         if self.is_smoker:
             score += 1
         if self.is_diabetic:
@@ -88,8 +92,8 @@ class Patient(BaseHealthEntity):
         if self.has_hypertension:
             score += 1
 
-        if score >= 5:
+        if score >= 6:
             return "HIGH"
-        elif score >= 2:
+        elif score >= 3:
             return "MEDIUM"
         return "LOW"

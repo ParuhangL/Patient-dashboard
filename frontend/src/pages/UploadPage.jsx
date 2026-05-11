@@ -56,7 +56,7 @@ function TrendTable({ data }) {
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '1px solid #2a3347' }}>
-            {['Patient', 'Predicted Systolic BP'].map(h => (
+            {['Patient', 'Predicted Systolic BP', 'Predicted Diastolic BP'].map(h => (
               <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
@@ -64,11 +64,13 @@ function TrendTable({ data }) {
         <tbody>
           {data.predictions.map((val, i) => {
             const name = typeof val === 'object' ? val.patient_name : null
-            const bp   = typeof val === 'object' ? (val.predicted_bp ?? val.value) : val
+            const sbp  = typeof val === 'object' ? (val.predicted_bp ?? val.value ?? val.predicted_systolic_bp) : val
+            const dbp  = typeof val === 'object' ? val.predicted_diastolic_bp : null
             return (
               <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
                 <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{name || `Patient ${i + 1}`}</td>
-                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{bp != null ? Number(bp).toFixed(1) : '—'} mmHg</td>
+                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{sbp != null ? Number(sbp).toFixed(1) : '—'} mmHg</td>
+                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{dbp != null ? Number(dbp).toFixed(1) : '—'} mmHg</td>
               </tr>
             )
           })}
@@ -232,8 +234,9 @@ function printAnalysisReport(reportData) {
   // Build each model's table HTML
   const trendRows = results.trend_prediction?.predictions?.map((val, i) => {
     const name = typeof val === 'object' ? val.patient_name : `Patient ${i+1}`
-    const bp = typeof val === 'object' ? (val.predicted_bp ?? val.value) : val
-    return `<tr><td>${name}</td><td>${bp != null ? Number(bp).toFixed(1) : '—'} mmHg</td></tr>`
+    const sbp = typeof val === 'object' ? (val.predicted_systolic_bp ?? val.predicted_bp ?? val.value) : val
+    const dbp = typeof val === 'object' ? val.predicted_diastolic_bp : null
+    return `<tr><td>${name}</td><td>${sbp != null ? Number(sbp).toFixed(1) : '—'} mmHg</td><td>${dbp != null ? Number(dbp).toFixed(1) : '—'} mmHg</td></tr>`
   }).join('') || ''
 
   const clusterRows = results.clustering?.predictions?.map((p, i) =>
@@ -287,7 +290,7 @@ function printAnalysisReport(reportData) {
   </div>
   ${etl.warnings?.length ? `<div style="font-size:12px;color:#d97706;margin-bottom:16px">⚠ ${etl.warnings.join(' · ')}</div>` : ''}
 
-  ${trendRows    ? modelTable('Trend Prediction (Linear Regression)',    `<thead><tr><th>Patient</th><th>Predicted Systolic BP</th></tr></thead><tbody>${trendRows}</tbody>`)    : ''}
+  ${trendRows    ? modelTable('Trend Prediction (Linear Regression)', `<thead><tr><th>Patient</th><th>Predicted Systolic BP</th><th>Predicted Diastolic BP</th></tr></thead><tbody>${trendRows}</tbody>`)    : ''}
   ${clusterRows  ? modelTable('Patient Clustering (KMeans)',             `<thead><tr><th>Patient</th><th>Cluster</th><th>Risk Profile</th></tr></thead><tbody>${clusterRows}</tbody>`) : ''}
   ${diseaseRows  ? modelTable('Disease Prediction (Logistic Regression)',`<thead><tr><th>Patient</th><th>Prediction</th><th>Diabetic %</th><th>Non-Diabetic %</th></tr></thead><tbody>${diseaseRows}</tbody>`) : ''}
   ${diagnosisRows? modelTable('Diagnosis Tree (Decision Tree)',          `<thead><tr><th>Patient</th><th>Risk Label</th><th>Confidence</th></tr></thead><tbody>${diagnosisRows}</tbody>`) : ''}
