@@ -358,11 +358,18 @@ export default function AnalysisPage() {
       </div>
 
       {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
-        <StatCard label="Total Results"   value={total}    color="#3b82f6" />
-        <StatCard label="High Risk"       value={highRisk} color="#ef4444" />
-        <StatCard label="Diabetic Flags"  value={diabetic} color="#f59e0b" />
-        <StatCard label="Most Used Model" value={topModel ? MODEL_LABELS[topModel]?.split(' ')[1] : 'All Equal'} color="#10b981" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, marginBottom: 24, background: '#111827', border: '1px solid #1e2535', borderRadius: 8, overflow: 'hidden' }}>
+        {[
+          { label: 'Total Results',   value: total,    color: '#3b82f6' },
+          { label: 'High Risk',       value: highRisk, color: '#ef4444' },
+          { label: 'Diabetic Flags',  value: diabetic, color: '#f59e0b' },
+
+        ].map((item, i) => (
+          <div key={item.label} style={{ padding: '16px 20px', borderRight: i < 3 ? '1px solid #1e2535' : 'none' }}>
+            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: item.color, lineHeight: 1 }}>{item.value ?? '—'}</div>
+          </div>
+        ))}
       </div>
 
       {/* Model breakdown bar */}
