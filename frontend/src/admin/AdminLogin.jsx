@@ -46,7 +46,7 @@ export default function AdminLogin() {
             margin: '0 auto 14px',
             fontSize: 20,
           }}>
-            🛡️
+            
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>
             Admin Panel

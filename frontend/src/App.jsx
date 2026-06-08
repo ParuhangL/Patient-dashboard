@@ -37,7 +37,7 @@ function AppInner() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  // ✅ ALL hooks must be at the top — before any conditional returns
+  // ALL hooks must be at the top — before any conditional returns
   const [uploadResult, setUploadResult] = useState(null)
   const [isAuth, setIsAuth] = useState(!!localStorage.getItem('access_token'))
   const [user, setUser] = useState(null)
@@ -55,7 +55,7 @@ function AppInner() {
     }
   }, [location.pathname, isAuth])
 
-  // ✅ Fetch user info whenever auth state changes
+  //  Fetch user info whenever auth state changes
   useEffect(() => {
     if (isAuth) {
       fetch('/api/auth/me/', {

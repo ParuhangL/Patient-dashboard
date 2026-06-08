@@ -147,7 +147,7 @@ export default function LoginPage({ onSuccess }) {
             onMouseEnter={e => e.currentTarget.style.color = '#64748b'}
             onMouseLeave={e => e.currentTarget.style.color = '#334155'}
           >
-            🛡️ Staff access
+             Staff access
           </Link>
         </div>
       </div>

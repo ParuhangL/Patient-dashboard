@@ -86,11 +86,11 @@ const ACTION_STYLES = {
 }
 
 const NAV_ITEMS = [
-  { key: 'overview',  label: 'Overview',    icon: '📊' },
-  { key: 'ml',        label: 'ML Health',   icon: '🤖' },
-  { key: 'users',     label: 'Users',       icon: '👥' },
-  { key: 'reports',   label: 'Reports',     icon: '📁' },
-  { key: 'audit',     label: 'Audit Log',   icon: '📋' },
+  { key: 'overview',  label: 'Overview',    icon: '' },
+  { key: 'ml',        label: 'ML Health',   icon: '' },
+  { key: 'users',     label: 'Users',       icon: '' },
+  { key: 'reports',   label: 'Reports',     icon: '' },
+  { key: 'audit',     label: 'Audit Log',   icon: '' },
 ]
 
 export default function AdminPage() {
@@ -436,7 +436,7 @@ export default function AdminPage() {
       }}>
         {/* Logo */}
         <div style={{ padding: '24px 20px 20px', borderBottom: '1px solid #1e2535' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>🛡️ Admin Panel</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}> Admin Panel</div>
           <div style={{ fontSize: 11, color: '#475569', marginTop: 4 }}>{adminUser.username}</div>
         </div>
 

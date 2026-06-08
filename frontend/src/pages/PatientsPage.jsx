@@ -470,7 +470,7 @@ function EditPatientForm({ patient, onSave, onCancel }) {
               alignItems: 'center',
               gap: 8,
             }}>
-              <span>💡</span>
+              
               <span>Editing vitals here updates the patient's baseline but won't appear in the BP Trend chart. To track a BP change over time, use <strong>Add Visit</strong> instead.</span>
             </div>
 

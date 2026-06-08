@@ -23,11 +23,11 @@ function StatCard({ label, value, color = '#3b82f6' }) {
 }
 
 const MODEL_LABELS = {
-  decision_tree:    '🌳 Decision Tree',
-  logistic:         '🧬 Logistic Regression',
-  linear_regression:'📈 Linear Regression',
-  kmeans:           '🔵 KMeans',
-  rule_based:       '📋 Rule Based',
+  decision_tree:    ' Decision Tree',
+  logistic:         ' Logistic Regression',
+  linear_regression:' Linear Regression',
+  kmeans:           ' KMeans',
+  rule_based:       ' Rule Based',
 }
 
 const MODEL_COLORS = {

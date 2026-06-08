@@ -197,11 +197,11 @@ function RuleBasedTable({ data }) {
 
 function MLResults({ mlResults }) {
   const mlComponents = {
-    trend_prediction:   { label: '📈 Trend Prediction (Linear Regression)',     Component: TrendTable },
-    clustering:         { label: '🔵 Patient Clustering (KMeans)',              Component: ClusterTable },
-    disease_prediction: { label: '🧬 Disease Prediction (Logistic Regression)', Component: DiseaseTable },
-    diagnosis_tree:     { label: '🌳 Diagnosis Tree (Decision Tree)',           Component: DiagnosisTable },
-    rule_based:         { label: '📋 Rule-Based Diagnosis Engine',              Component: RuleBasedTable },
+    trend_prediction:   { label: ' Trend Prediction (Linear Regression)',     Component: TrendTable },
+    clustering:         { label: ' Patient Clustering (KMeans)',              Component: ClusterTable },
+    disease_prediction: { label: ' Disease Prediction (Logistic Regression)', Component: DiseaseTable },
+    diagnosis_tree:     { label: ' Diagnosis Tree (Decision Tree)',           Component: DiagnosisTable },
+    rule_based:         { label: ' Rule-Based Diagnosis Engine',              Component: RuleBasedTable },
   }
   return (
     <>
@@ -732,10 +732,10 @@ const [deleteLoading, setDeleteLoading] = useState(false)
         borderRadius: 9, padding: 4, width: 'fit-content',
       }}>
         <button style={tabStyle(tab === 'csv')}    onClick={() => setTab('csv')}>
-          📂 CSV Upload
+           CSV Upload
         </button>
         <button style={tabStyle(tab === 'manual')} onClick={() => setTab('manual')}>
-          ✍️ Manual Entry
+           Manual Entry
         </button>
       </div>
 
@@ -813,7 +813,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
 
           {uploadResult && (
             <div className="animate-fade-in">
-              <Section title="✅ ETL Pipeline Report">
+              <Section title=" ETL Pipeline Report">
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                   <button
                     onClick={() => printAnalysisReport({ ...uploadResult, file_name: file?.name })}
@@ -846,7 +846,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
 
           {/* Past Reports */}
           <div className="card" style={{ padding: 24, marginTop: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 16 }}>📋 Saved Analysis Reports</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 16 }}> Saved Analysis Reports</div>
             {reportsLoading ? (
               <div style={{ color: '#64748b', fontSize: 13 }}>Loading reports...</div>
             ) : reports.length === 0 ? (
