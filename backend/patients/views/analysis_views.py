@@ -9,6 +9,7 @@ import pandas as pd
 import traceback
 from patients.services.ml_service import MLAnalysisService, RuleBasedPredictor
 from datetime import date
+from patients.services.base import BasePredictor
 
 
 class DataUploadView(APIView):
@@ -57,6 +58,10 @@ class AnalyseView(APIView):
             # ---------------- ETL ----------------
             pipeline = ETLPipeline()
             df, report = pipeline.run(file, file.name)
+
+            print("ETL errors:", report.errors)
+            print("ETL warnings:", report.warnings)
+            print("DF shape:", df.shape)
 
             if report.errors:
                 return Response(
@@ -436,110 +441,146 @@ class AnalysePatientView(APIView):
         except Exception as e:
             errors["rule_based"] = str(e)
 
-        # 2. Logistic Regression
+        # 2. Logistic Regression — use saved model if available, else proxy
         try:
-            glucose = row["glucose_level"]
-            bmi = row["bmi"]
-            is_diabetic_flag = patient.is_diabetic
-
-            score = 0
-            if glucose > 125:
-                score += 3
-            elif glucose > 100:
-                score += 1
-            if bmi > 30:
-                score += 2
-            elif bmi > 25:
-                score += 1
-            if row["has_hypertension"]:
-                score += 1
-            if row["is_smoker"]:
-                score += 1
-            if row["age"] > 45:
-                score += 1
-
-            prob_diabetic = round(min(score / 8.0, 0.97), 4)
-            if is_diabetic_flag:
-                prob_diabetic = max(prob_diabetic, 0.65)
-
-            prob_non = round(1 - prob_diabetic, 4)
-            prediction = "Diabetic" if prob_diabetic >= 0.5 else "Non-Diabetic"
-
-            pred = {
-                "prediction": prediction,
-                "probability_diabetic": prob_diabetic,
-                "probability_non_diabetic": prob_non,
-            }
-            results["disease_prediction"] = {
-                "predictions": [pred],
-                "model_info": {
-                    "model": "DiseasePredictor",
-                    "algorithm": "Logistic Regression (single-patient scoring)",
-                    "note": "Score-based proxy — batch upload trains full model",
-                },
-            }
-            AnalysisResult.objects.create(
-                patient=patient,
-                model_type="logistic",
-                result=pred,
-                confidence=max(prob_diabetic, prob_non),
-                risk_label=prediction,
-                notes="Single patient analysis",
-            )
+            saved_disease = BasePredictor.load("DiseasePredictor")
+            if saved_disease is not None:
+                single_df = pd.DataFrame([row])
+                preds = saved_disease.predict(single_df)
+                pred = preds[0]
+                conf = max(
+                    pred.get("probability_diabetic") or 0,
+                    pred.get("probability_non_diabetic") or 0,
+                )
+                results["disease_prediction"] = {
+                    "predictions": [pred],
+                    "model_info": saved_disease.get_model_info(),
+                }
+                AnalysisResult.objects.create(
+                    patient=patient,
+                    model_type="logistic",
+                    result=pred,
+                    confidence=round(conf, 4),
+                    risk_label=pred.get("prediction", ""),
+                    notes="Single patient analysis",
+                )
+            else:
+                # Proxy fallback — no model trained yet
+                glucose = row["glucose_level"]
+                bmi = row["bmi"]
+                is_diabetic_flag = patient.is_diabetic
+                score = 0
+                if glucose > 125:
+                    score += 3
+                elif glucose > 100:
+                    score += 1
+                if bmi > 30:
+                    score += 2
+                elif bmi > 25:
+                    score += 1
+                if row["has_hypertension"]:
+                    score += 1
+                if row["is_smoker"]:
+                    score += 1
+                if row["age"] > 45:
+                    score += 1
+                prob_diabetic = round(min(score / 8.0, 0.97), 4)
+                if is_diabetic_flag:
+                    prob_diabetic = max(prob_diabetic, 0.65)
+                prob_non = round(1 - prob_diabetic, 4)
+                prediction = "Diabetic" if prob_diabetic >= 0.5 else "Non-Diabetic"
+                pred = {
+                    "prediction": prediction,
+                    "probability_diabetic": prob_diabetic,
+                    "probability_non_diabetic": prob_non,
+                }
+                results["disease_prediction"] = {
+                    "predictions": [pred],
+                    "model_info": {
+                        "model": "DiseasePredictor",
+                        "algorithm": "Logistic Regression (single-patient proxy — no model trained yet)",
+                    },
+                }
+                AnalysisResult.objects.create(
+                    patient=patient,
+                    model_type="logistic",
+                    result=pred,
+                    confidence=max(prob_diabetic, prob_non),
+                    risk_label=prediction,
+                    notes="Single patient analysis",
+                )
         except Exception as e:
             errors["disease_prediction"] = str(e)
 
-        # 3. Decision Tree
+        # 3. Decision Tree — use saved model if available, else proxy
         try:
-            score = 0
-            if row["glucose_level"] > 125:
-                score += 1
-            if row["bmi"] > 30:
-                score += 1
-            if row["blood_pressure_systolic"] > 140:  # was 135
-                score += 1
-            if row["blood_pressure_diastolic"] > 90:  # new
-                score += 1
-            if row["heart_rate"] > 100:  # new
-                score += 1
-            if row["is_smoker"]:
-                score += 1
-            if row["has_hypertension"]:
-                score += 1
-
-            if score <= 1:
-                risk_label, confidence = "LOW", round(1 - score * 0.1, 4)
-            elif score <= 3:
-                risk_label, confidence = "MEDIUM", round(0.5 + score * 0.05, 4)
+            saved_tree = BasePredictor.load("DiagnosisTreePredictor")
+            if saved_tree is not None:
+                single_df = pd.DataFrame([row])
+                preds = saved_tree.predict(single_df)
+                pred = preds[0]
+                results["diagnosis_tree"] = {
+                    "predictions": [pred],
+                    "model_info": saved_tree.get_model_info(),
+                }
+                AnalysisResult.objects.create(
+                    patient=patient,
+                    model_type="decision_tree",
+                    result=pred,
+                    confidence=pred.get("confidence"),
+                    risk_label=pred.get("risk_label", ""),
+                    notes="Single patient analysis",
+                )
             else:
-                risk_label, confidence = "HIGH", round(min(0.6 + score * 0.08, 0.97), 4)
-
-            pred = {
-                "risk_label": risk_label,
-                "confidence": confidence,
-                "probabilities": {
-                    "LOW": 0.0,
-                    "MEDIUM": 0.0,
-                    "HIGH": 0.0,
-                    risk_label: confidence,
-                },
-            }
-            results["diagnosis_tree"] = {
-                "predictions": [pred],
-                "model_info": {
-                    "model": "DiagnosisTreePredictor",
-                    "algorithm": "Decision Tree (single-patient scoring)",
-                    "note": "Score-based proxy — batch upload trains full model",
-                },
-            }
-            AnalysisResult.objects.create(
-                patient=patient,
-                model_type="decision_tree",
-                result=pred,
-                confidence=confidence,
-                risk_label=risk_label,
-                notes="Single patient analysis",
-            )
+                # Proxy fallback — no model trained yet
+                score = 0
+                if row["glucose_level"] > 125:
+                    score += 1
+                if row["bmi"] > 30:
+                    score += 1
+                if row["blood_pressure_systolic"] > 140:
+                    score += 1
+                if row["blood_pressure_diastolic"] > 90:
+                    score += 1
+                if row["heart_rate"] > 100:
+                    score += 1
+                if row["is_smoker"]:
+                    score += 1
+                if row["has_hypertension"]:
+                    score += 1
+                if score <= 1:
+                    risk_label, confidence = "LOW", round(1 - score * 0.1, 4)
+                elif score <= 3:
+                    risk_label, confidence = "MEDIUM", round(0.5 + score * 0.05, 4)
+                else:
+                    risk_label, confidence = "HIGH", round(
+                        min(0.6 + score * 0.08, 0.97), 4
+                    )
+                pred = {
+                    "risk_label": risk_label,
+                    "confidence": confidence,
+                    "probabilities": {
+                        "LOW": 0.0,
+                        "MEDIUM": 0.0,
+                        "HIGH": 0.0,
+                        risk_label: confidence,
+                    },
+                }
+                results["diagnosis_tree"] = {
+                    "predictions": [pred],
+                    "model_info": {
+                        "model": "DiagnosisTreePredictor",
+                        "algorithm": "Decision Tree (single-patient proxy — no model trained yet)",
+                    },
+                }
+                AnalysisResult.objects.create(
+                    patient=patient,
+                    model_type="decision_tree",
+                    result=pred,
+                    confidence=confidence,
+                    risk_label=risk_label,
+                    notes="Single patient analysis",
+                )
         except Exception as e:
             errors["diagnosis_tree"] = str(e)
 

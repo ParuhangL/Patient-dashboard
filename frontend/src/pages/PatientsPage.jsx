@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { getPatients, getAllPatients, getPatient, getRecords, getPatientAnalyses, updatePatient, deletePatient, createRecord, analysePatient, bulkDeletePatients } from '../api'
-import { Search, ChevronLeft, ChevronRight, X, Download, Pencil, Trash2, Save, AlertTriangle, PlusCircle, CheckCircle, RefreshCw, FileText } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, X, Download, Pencil, Trash2, Save, AlertTriangle, PlusCircle, RefreshCw, FileText } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
 } from 'recharts'
 import { createPortal } from 'react-dom'
+import { useToast } from '../App'
 
 const RISK_COLORS = { LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444' }
 const RISK_BG =     { LOW: '#052e16', MEDIUM: '#431407', HIGH: '#450a0a' }
@@ -291,7 +292,7 @@ function computeAge(dob) {
   return age
 }
 
-function EditPatientForm({ patient, onSave, onCancel }) {
+function EditPatientForm({ patient, onSave, onCancel, toast }) {
   const [form, setForm] = useState({
     first_name: patient.first_name || '',
     last_name: patient.last_name || '',
@@ -309,32 +310,117 @@ function EditPatientForm({ patient, onSave, onCancel }) {
     is_diabetic: patient.is_diabetic ?? false,
     has_hypertension: patient.has_hypertension ?? false,
   })
+  const [touched, setTouched] = useState({})
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
+  const [serverError, setServerError] = useState(null)
 
+  const today = new Date().toISOString().slice(0, 10)
   const previewAge = computeAge(form.date_of_birth)
+
+  const VITALS_RULES = {
+    blood_pressure_systolic:  { min: 60,  max: 250, label: 'Systolic BP' },
+    blood_pressure_diastolic: { min: 40,  max: 150, label: 'Diastolic BP' },
+    heart_rate:               { min: 30,  max: 220, label: 'Heart Rate' },
+    glucose_level:            { min: 20,  max: 600, label: 'Glucose' },
+    bmi:                      { min: 10,  max: 70,  label: 'BMI' },
+    cholesterol:              { min: 50,  max: 500, label: 'Cholesterol' },
+  }
+
+  const validate = (name, value) => {
+    switch (name) {
+      case 'first_name':
+      case 'last_name': {
+        const label = name === 'first_name' ? 'First name' : 'Last name'
+        if (!value.trim()) return `${label} is required.`
+        if (value.trim().length > 50) return `${label} must be 50 characters or fewer.`
+        if (!/^[a-zA-Z\s'\-]+$/.test(value)) return `${label} can only contain letters, spaces, hyphens, or apostrophes.`
+        return ''
+      }
+      case 'date_of_birth': {
+        if (!value) return 'Date of birth is required.'
+        if (value >= today) return 'Date of birth must be in the past.'
+        const age = computeAge(value)
+        if (age > 120) return 'Age cannot exceed 120 years.'
+        return ''
+      }
+      case 'email': {
+        if (!value) return ''
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return 'Enter a valid email address.'
+        return ''
+      }
+      case 'phone': {
+        if (!value) return ''
+        if (!/^[0-9\s\+\-\(\)]+$/.test(value)) return 'Phone can only contain digits, spaces, +, -, or parentheses.'
+        const digits = value.replace(/\D/g, '')
+        if (digits.length < 7) return 'Phone number is too short.'
+        if (digits.length > 15) return 'Phone number is too long.'
+        return ''
+      }
+      default: {
+        if (VITALS_RULES[name]) {
+          if (value === '' || value === null) return ''
+          const num = parseFloat(value)
+          if (isNaN(num)) return 'Must be a number.'
+          const { min, max, label } = VITALS_RULES[name]
+          if (num < min || num > max) return `${label} must be between ${min} and ${max}.`
+        }
+        return ''
+      }
+    }
+  }
+
+  const getError = (name) => {
+    if (!touched[name]) return ''
+    return validate(name, form[name])
+  }
+
+  const handleBlur = (name) => setTouched(t => ({ ...t, [name]: true }))
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
+    if (name === 'date_of_birth' && value && value.split('-')[0].length > 4) return
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
+    if (serverError) setServerError(null)
+  }
+
+  const isFormValid = () => {
+    return Object.keys(form).every(name => {
+      if (typeof form[name] === 'boolean') return true
+      return validate(name, form[name]) === ''
+    })
   }
 
   const handleSubmit = async () => {
+    const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {})
+    setTouched(allTouched)
+    if (!isFormValid()) return
+
     setSaving(true)
-    setError(null)
+    setServerError(null)
     try {
       const payload = { ...form }
-      ;['blood_pressure_systolic','blood_pressure_diastolic','heart_rate','glucose_level','bmi','cholesterol'].forEach(k => {
+      Object.keys(VITALS_RULES).forEach(k => {
         payload[k] = payload[k] !== '' && payload[k] !== null ? parseFloat(payload[k]) : null
       })
       const res = await updatePatient(patient.id, payload)
+      toast.success('Patient updated', `${payload.first_name} ${payload.last_name}'s record has been saved.`)
       onSave({ ...res.data, age: computeAge(payload.date_of_birth) })
     } catch (err) {
-      setError(err.response?.data ? JSON.stringify(err.response.data) : 'Failed to save changes')
+      const msg = err.response?.data ? JSON.stringify(err.response.data) : 'Failed to save changes.'
+      setServerError(msg)
+      toast.error('Save failed', msg)
     } finally {
       setSaving(false)
     }
   }
+
+  const inputStyle = (name) => ({
+    width: '100%', padding: '8px 10px',
+    background: '#0f1117',
+    border: `1px solid ${getError(name) ? '#ef4444' : '#2a3347'}`,
+    borderRadius: 6, color: '#e2e8f0', fontSize: 13,
+    outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+  })
 
   const sectionLabel = (text) => (
     <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>
@@ -342,35 +428,89 @@ function EditPatientForm({ patient, onSave, onCancel }) {
     </div>
   )
 
+  const FieldError = ({ name }) => {
+    const err = getError(name)
+    return err ? <span style={{ fontSize: 11, color: '#ef4444', marginTop: 2, display: 'block' }}>{err}</span> : null
+  }
+
+  const TextField = ({ label, name, type = 'text', placeholder = '' }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
+      <input
+        type={type} name={name} value={form[name] ?? ''}
+        onChange={handleChange}
+        onBlur={() => handleBlur(name)}
+        placeholder={placeholder}
+        style={inputStyle(name)}
+      />
+      <FieldError name={name} />
+    </div>
+  )
+
   return (
     <div>
       {sectionLabel('Personal Info')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        <Field label="First Name" name="first_name" value={form.first_name} onChange={handleChange} />
-        <Field label="Last Name" name="last_name" value={form.last_name} onChange={handleChange} />
+        <TextField label="First Name *" name="first_name" />
+        <TextField label="Last Name *"  name="last_name" />
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Date of Birth</label>
+          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Date of Birth *</label>
           <input
             type="date" name="date_of_birth" value={form.date_of_birth}
-            onChange={(e) => { const val = e.target.value; if (val && val.split('-')[0].length > 4) return; handleChange(e) }}
-            style={{ padding: '8px 10px', background: '#0f1117', border: '1px solid #2a3347', borderRadius: 6, color: '#e2e8f0', fontSize: 13, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }}
+            max={today}
+            onChange={handleChange}
+            onBlur={() => handleBlur('date_of_birth')}
+            style={inputStyle('date_of_birth')}
           />
-          {previewAge !== null && <span style={{ fontSize: 11, color: '#3b82f6' }}>Age: {previewAge}</span>}
+          {previewAge !== null && !getError('date_of_birth') && (
+            <span style={{ fontSize: 11, color: '#3b82f6' }}>Age: {previewAge}</span>
+          )}
+          <FieldError name="date_of_birth" />
         </div>
-        <Field label="Gender" name="gender" value={form.gender} onChange={handleChange} options={[{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }, { value: 'O', label: 'Other' }]} />
-        <Field label="Email" name="email" type="email" value={form.email} onChange={handleChange} />
-        <Field label="Phone" name="phone" value={form.phone} onChange={handleChange} />
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Gender</label>
+          <select
+            name="gender" value={form.gender}
+            onChange={handleChange}
+            style={{ ...inputStyle('gender'), cursor: 'pointer' }}
+          >
+            <option value="M">Male</option>
+            <option value="F">Female</option>
+            <option value="O">Other</option>
+          </select>
+        </div>
+
+        <TextField label="Email"  name="email" type="email" placeholder="you@example.com" />
+        <TextField label="Phone"  name="phone" placeholder="+1 555 000 0000" />
       </div>
 
       {sectionLabel('Health Metrics')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-        <Field label="Systolic BP (mmHg)"  name="blood_pressure_systolic"  type="number" value={form.blood_pressure_systolic}  onChange={handleChange} />
-        <Field label="Diastolic BP (mmHg)" name="blood_pressure_diastolic" type="number" value={form.blood_pressure_diastolic} onChange={handleChange} />
-        <Field label="Heart Rate (bpm)"    name="heart_rate"               type="number" value={form.heart_rate}               onChange={handleChange} />
-        <Field label="Glucose (mg/dL)"     name="glucose_level"            type="number" value={form.glucose_level}            onChange={handleChange} />
-        <Field label="BMI"                 name="bmi"                      type="number" value={form.bmi}                      onChange={handleChange} />
-        <Field label="Cholesterol (mg/dL)" name="cholesterol"              type="number" value={form.cholesterol}              onChange={handleChange} />
+        {[
+          { label: 'Systolic BP (mmHg)',  name: 'blood_pressure_systolic',  placeholder: '60–250' },
+          { label: 'Diastolic BP (mmHg)', name: 'blood_pressure_diastolic', placeholder: '40–150' },
+          { label: 'Heart Rate (bpm)',    name: 'heart_rate',               placeholder: '30–220' },
+          { label: 'Glucose (mg/dL)',     name: 'glucose_level',            placeholder: '20–600' },
+          { label: 'BMI',                 name: 'bmi',                      placeholder: '10–70' },
+          { label: 'Cholesterol (mg/dL)', name: 'cholesterol',              placeholder: '50–500' },
+        ].map(({ label, name, placeholder }) => (
+          <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
+            <input
+              type="number" name={name} value={form[name] ?? ''}
+              onChange={handleChange}
+              onBlur={() => handleBlur(name)}
+              placeholder={placeholder}
+              step="0.1"
+              style={inputStyle(name)}
+            />
+            <FieldError name={name} />
+          </div>
+        ))}
       </div>
+
       <div style={{ marginTop: 8, padding: '8px 12px', background: '#0f1f10', border: '1px solid #1a3a1a', borderRadius: 6, fontSize: 12, color: '#86efac' }}>
         Editing vitals here updates the patient's baseline. To track changes over time, use <strong>Add Visit</strong>.
       </div>
@@ -379,19 +519,33 @@ function EditPatientForm({ patient, onSave, onCancel }) {
       <div style={{ display: 'flex', gap: 24 }}>
         {[{ label: 'Smoker', name: 'is_smoker' }, { label: 'Diabetic', name: 'is_diabetic' }, { label: 'Hypertension', name: 'has_hypertension' }].map(({ label, name }) => (
           <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#94a3b8' }}>
-            <input type="checkbox" name={name} checked={form[name]} onChange={handleChange} style={{ width: 15, height: 15, accentColor: '#3b82f6', cursor: 'pointer' }} />
+            <input
+              type="checkbox" name={name} checked={form[name]}
+              onChange={handleChange}
+              style={{ width: 15, height: 15, accentColor: '#3b82f6', cursor: 'pointer' }}
+            />
             {label}
           </label>
         ))}
       </div>
 
-      {error && <div style={{ marginTop: 14, padding: '10px 14px', background: '#450a0a', borderRadius: 6, color: '#fca5a5', fontSize: 13 }}>{error}</div>}
+      {serverError && (
+        <div style={{ marginTop: 14, padding: '10px 14px', background: '#450a0a', borderRadius: 6, color: '#fca5a5', fontSize: 13 }}>
+          {serverError}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-        <button onClick={handleSubmit} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#2563eb', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>
+        <button
+          onClick={handleSubmit} disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#2563eb', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}
+        >
           <Save size={13} />{saving ? 'Saving...' : 'Save Changes'}
         </button>
-        <button onClick={onCancel} disabled={saving} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button
+          onClick={onCancel} disabled={saving}
+          style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+        >
           Cancel
         </button>
       </div>
@@ -399,66 +553,117 @@ function EditPatientForm({ patient, onSave, onCancel }) {
   )
 }
 
-function AddVisitForm({ patientId, onSaved, onCancel }) {
+function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
   const today = new Date().toISOString().slice(0, 10)
-  const [form, setForm] = useState({ visit_date: today, diagnosis: '', notes: '', blood_pressure_systolic: '', blood_pressure_diastolic: '', heart_rate: '', glucose_level: '', bmi: '', temperature: '' })
+  const [form, setForm] = useState({
+    visit_date: today, diagnosis: '', notes: '',
+    blood_pressure_systolic: '', blood_pressure_diastolic: '',
+    heart_rate: '', glucose_level: '', bmi: '', temperature: '',
+  })
+  const [touched, setTouched] = useState({})
   const [saving, setSaving] = useState(false)
-  const [errors, setErrors] = useState({})
-  const [success, setSuccess] = useState(false)
+  const [serverErrors, setServerErrors] = useState({})
 
-  const NUM_FIELDS = ['blood_pressure_systolic','blood_pressure_diastolic','heart_rate','glucose_level','bmi','temperature']
+  const VITALS_RULES = {
+    blood_pressure_systolic:  { min: 60,  max: 250, label: 'Systolic BP' },
+    blood_pressure_diastolic: { min: 40,  max: 150, label: 'Diastolic BP' },
+    heart_rate:               { min: 30,  max: 220, label: 'Heart Rate' },
+    glucose_level:            { min: 20,  max: 600, label: 'Glucose' },
+    bmi:                      { min: 10,  max: 70,  label: 'BMI' },
+    temperature:              { min: 34,  max: 42,  label: 'Temperature' },
+  }
+
+  const validate = (name, value) => {
+    if (name === 'visit_date') {
+      if (!value) return 'Visit date is required.'
+      if (value > today) return 'Visit date cannot be in the future.'
+      return ''
+    }
+    if (name === 'diagnosis') {
+      if (value.length > 200) return 'Max 200 characters.'
+      if (value && !/^[a-zA-Z0-9\s\-,.()/]+$/.test(value)) return 'Invalid characters in diagnosis.'
+      return ''
+    }
+    if (name === 'notes') {
+      if (value.length > 1000) return 'Max 1000 characters.'
+      return ''
+    }
+    if (VITALS_RULES[name]) {
+      if (value === '' || value === null) return ''
+      const num = parseFloat(value)
+      if (isNaN(num)) return 'Must be a number.'
+      const { min, max, label } = VITALS_RULES[name]
+      if (num < min || num > max) return `${label} must be between ${min} and ${max}.`
+      return ''
+    }
+    return ''
+  }
+
+  const getError = (name) => {
+    if (!touched[name]) return ''
+    return serverErrors[name] || validate(name, form[name])
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm(f => ({ ...f, [name]: value }))
-    if (errors[name]) setErrors(prev => { const n = { ...prev }; delete n[name]; return n })
+    if (serverErrors[name]) setServerErrors(prev => { const n = { ...prev }; delete n[name]; return n })
   }
 
+  const handleBlur = (name) => setTouched(t => ({ ...t, [name]: true }))
+
+  const isFormValid = () => Object.keys(form).every(name => validate(name, form[name]) === '')
+
   const handleSubmit = async () => {
+    const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {})
+    setTouched(allTouched)
+    if (!isFormValid()) return
+
     setSaving(true)
-    setErrors({})
+    setServerErrors({})
     try {
       const payload = { ...form, patient: patientId }
-      NUM_FIELDS.forEach(k => { payload[k] = payload[k] !== '' ? parseFloat(payload[k]) : null })
+      Object.keys(VITALS_RULES).forEach(k => {
+        payload[k] = payload[k] !== '' ? parseFloat(payload[k]) : null
+      })
       const res = await createRecord(payload)
-      setSuccess(true)
-      setTimeout(() => onSaved(res.data), 900)
+      toast.success('Visit recorded', `Visit on ${form.visit_date} has been saved.`)
+      onSaved(res.data)
     } catch (err) {
       const data = err.response?.data
       if (data && typeof data === 'object') {
         const mapped = {}
-        Object.entries(data).forEach(([key, msgs]) => { mapped[key] = Array.isArray(msgs) ? msgs.join(' ') : String(msgs) })
-        setErrors(mapped)
+        Object.entries(data).forEach(([key, msgs]) => {
+          mapped[key] = Array.isArray(msgs) ? msgs.join(' ') : String(msgs)
+        })
+        setServerErrors(mapped)
+        setTouched(t => ({ ...t, ...Object.keys(mapped).reduce((acc, k) => ({ ...acc, [k]: true }), {}) }))
+        toast.error('Save failed', 'Please fix the errors and try again.')
       } else {
-        setErrors({ non_field_errors: 'Failed to save visit.' })
+        setServerErrors({ non_field_errors: 'Failed to save visit.' })
+        toast.error('Save failed', 'Failed to save visit.')
       }
     } finally {
       setSaving(false)
     }
   }
 
-  const inputStyle = (hasError) => ({
+  const inputStyle = (name) => ({
     width: '100%', padding: '8px 10px', background: '#0f1117',
-    border: `1px solid ${hasError ? '#ef4444' : '#2a3347'}`,
-    borderRadius: 6, color: '#e2e8f0', fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+    border: `1px solid ${getError(name) ? '#ef4444' : '#2a3347'}`,
+    borderRadius: 6, color: '#e2e8f0', fontSize: 13,
+    outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
   })
 
   const sectionLabel = (text) => (
-    <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>{text}</div>
+    <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>
+      {text}
+    </div>
   )
 
-  const FieldError = ({ name }) => errors[name]
-    ? <span style={{ fontSize: 11, color: '#ef4444', marginTop: 2, display: 'block' }}>{errors[name]}</span>
-    : null
-
-  if (success) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '48px 20px' }}>
-        <CheckCircle size={40} color="#10b981" />
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#10b981' }}>Visit recorded</div>
-        <div style={{ fontSize: 13, color: '#475569' }}>Updating BP trend chart…</div>
-      </div>
-    )
+  const FieldError = ({ name }) => {
+    const err = getError(name)
+    return err ? <span style={{ fontSize: 11, color: '#ef4444', marginTop: 2, display: 'block' }}>{err}</span> : null
   }
 
   return (
@@ -470,47 +675,93 @@ function AddVisitForm({ patientId, onSaved, onCancel }) {
       {sectionLabel('Visit Details')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Visit Date <span style={{ color: '#ef4444' }}>*</span></label>
-          <input type="date" name="visit_date" value={form.visit_date} onChange={handleChange} max={today} style={inputStyle(!!errors.visit_date)} />
+          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            Visit Date <span style={{ color: '#ef4444' }}>*</span>
+          </label>
+          <input
+            type="date" name="visit_date" value={form.visit_date}
+            max={today}
+            onChange={handleChange}
+            onBlur={() => handleBlur('visit_date')}
+            style={inputStyle('visit_date')}
+          />
           <FieldError name="visit_date" />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Diagnosis</label>
-          <input type="text" name="diagnosis" value={form.diagnosis} onChange={handleChange} placeholder="e.g. Hypertension" style={inputStyle(!!errors.diagnosis)} />
+          <input
+            type="text" name="diagnosis" value={form.diagnosis}
+            onChange={handleChange}
+            onBlur={() => handleBlur('diagnosis')}
+            placeholder="e.g. Hypertension"
+            style={inputStyle('diagnosis')}
+          />
           <FieldError name="diagnosis" />
         </div>
       </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10 }}>
-        <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Clinical Notes</label>
-        <textarea name="notes" value={form.notes} onChange={handleChange} rows={3} placeholder="Observations, medications prescribed…" style={{ ...inputStyle(!!errors.notes), resize: 'vertical', lineHeight: 1.5 }} />
+        <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          Clinical Notes
+          {form.notes.length > 0 && (
+            <span style={{ float: 'right', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: form.notes.length > 1000 ? '#ef4444' : '#334155' }}>
+              {form.notes.length}/1000
+            </span>
+          )}
+        </label>
+        <textarea
+          name="notes" value={form.notes}
+          onChange={handleChange}
+          onBlur={() => handleBlur('notes')}
+          rows={3}
+          placeholder="Observations, medications prescribed…"
+          style={{ ...inputStyle('notes'), resize: 'vertical', lineHeight: 1.5 }}
+        />
         <FieldError name="notes" />
       </div>
 
       {sectionLabel('Vitals at This Visit')}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
         {[
-          { label: 'Systolic BP (mmHg)', name: 'blood_pressure_systolic', placeholder: '120' },
-          { label: 'Diastolic BP (mmHg)', name: 'blood_pressure_diastolic', placeholder: '80' },
-          { label: 'Heart Rate (bpm)', name: 'heart_rate', placeholder: '72' },
-          { label: 'Glucose (mg/dL)', name: 'glucose_level', placeholder: '95' },
-          { label: 'BMI', name: 'bmi', placeholder: '24.5' },
-          { label: 'Temperature (°C)', name: 'temperature', placeholder: '36.6' },
+          { label: 'Systolic BP (mmHg)',  name: 'blood_pressure_systolic',  placeholder: '60–250' },
+          { label: 'Diastolic BP (mmHg)', name: 'blood_pressure_diastolic', placeholder: '40–150' },
+          { label: 'Heart Rate (bpm)',    name: 'heart_rate',               placeholder: '30–220' },
+          { label: 'Glucose (mg/dL)',     name: 'glucose_level',            placeholder: '20–600' },
+          { label: 'BMI',                 name: 'bmi',                      placeholder: '10–70' },
+          { label: 'Temperature (°C)',    name: 'temperature',              placeholder: '34–42' },
         ].map(({ label, name, placeholder }) => (
           <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
-            <input type="number" name={name} value={form[name]} onChange={handleChange} placeholder={placeholder} step="0.1" style={inputStyle(!!errors[name])} />
+            <input
+              type="number" name={name} value={form[name]}
+              onChange={handleChange}
+              onBlur={() => handleBlur(name)}
+              placeholder={placeholder}
+              step="0.1"
+              style={inputStyle(name)}
+            />
             <FieldError name={name} />
           </div>
         ))}
       </div>
 
-      {errors.non_field_errors && <div style={{ marginTop: 14, padding: '10px 14px', background: '#450a0a', borderRadius: 6, color: '#fca5a5', fontSize: 13 }}>{errors.non_field_errors}</div>}
+      {serverErrors.non_field_errors && (
+        <div style={{ marginTop: 14, padding: '10px 14px', background: '#450a0a', borderRadius: 6, color: '#fca5a5', fontSize: 13 }}>
+          {serverErrors.non_field_errors}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 10, marginTop: 22 }}>
-        <button onClick={handleSubmit} disabled={saving} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#059669', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>
+        <button
+          onClick={handleSubmit} disabled={saving}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#059669', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}
+        >
           <Save size={13} />{saving ? 'Saving…' : 'Save Visit'}
         </button>
-        <button onClick={onCancel} disabled={saving} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <button
+          onClick={onCancel} disabled={saving}
+          style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+        >
           Cancel
         </button>
       </div>
@@ -518,13 +769,19 @@ function AddVisitForm({ patientId, onSaved, onCancel }) {
   )
 }
 
-function DeleteConfirm({ patient, onConfirm, onCancel }) {
+function DeleteConfirm({ patient, onConfirm, onCancel, toast }) {
   const [deleting, setDeleting] = useState(false)
 
   const handleDelete = async () => {
     setDeleting(true)
-    try { await deletePatient(patient.id); onConfirm() }
-    catch { setDeleting(false) }
+    try {
+      await deletePatient(patient.id)
+      toast.success('Patient deleted', `${patient.first_name} ${patient.last_name} has been removed.`)
+      onConfirm()
+    } catch {
+      toast.error('Delete failed', 'Could not delete patient. Please try again.')
+      setDeleting(false)
+    }
   }
 
   return (
@@ -546,7 +803,7 @@ function DeleteConfirm({ patient, onConfirm, onCancel }) {
   )
 }
 
-function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted }) {
+function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted, toast }) {
   const [patient, setPatient] = useState(null)
   const [analyses, setAnalyses] = useState([])
   const [records, setRecords] = useState([])
@@ -554,7 +811,6 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted }
   const [error, setError] = useState(null)
   const [mode, setMode] = useState('view')
   const [reanalysing, setReanalysing] = useState(false)
-  const [reanalyseMsg, setReanalyseMsg] = useState(null)
 
   useEffect(() => {
     Promise.all([getPatient(patientId), getPatientAnalyses(patientId), getRecords({ patient_id: patientId })])
@@ -569,17 +825,15 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted }
 
   const handleReanalyse = async () => {
     setReanalysing(true)
-    setReanalyseMsg(null)
     try {
       await analysePatient(patient.id)
       const aRes = await getPatientAnalyses(patient.id)
       setAnalyses(aRes.data.analyses || [])
-      setReanalyseMsg({ type: 'success', text: 'Re-analysis complete.' })
+      toast.success('Re-analysis complete', 'All ML models have been updated.')
     } catch {
-      setReanalyseMsg({ type: 'error', text: 'Re-analysis failed.' })
+      toast.error('Re-analysis failed', 'Could not run analysis. Please try again.')
     } finally {
       setReanalysing(false)
-      setTimeout(() => setReanalyseMsg(null), 4000)
     }
   }
 
@@ -653,19 +907,12 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted }
         </div>
 
         {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
-        {patient && mode === 'edit'      && <EditPatientForm patient={patient} onSave={handleSaved} onCancel={() => setMode('view')} />}
-        {patient && mode === 'add_visit' && <AddVisitForm patientId={patient.id} onSaved={handleVisitAdded} onCancel={() => setMode('view')} />}
-        {patient && mode === 'delete'    && <DeleteConfirm patient={patient} onConfirm={() => { onPatientDeleted?.(patientId); onClose() }} onCancel={() => setMode('view')} />}
+        {patient && mode === 'edit'      && <EditPatientForm patient={patient} onSave={handleSaved} onCancel={() => setMode('view')} toast={toast} />}
+        {patient && mode === 'add_visit' && <AddVisitForm patientId={patient.id} onSaved={handleVisitAdded} onCancel={() => setMode('view')} toast={toast} />}
+        {patient && mode === 'delete'    && <DeleteConfirm patient={patient} onConfirm={() => { onPatientDeleted?.(patientId); onClose() }} onCancel={() => setMode('view')} toast={toast} />}
 
         {patient && mode === 'view' && (
           <>
-            {reanalyseMsg && (
-              <div style={{ marginBottom: 14, padding: '9px 14px', borderRadius: 6, fontSize: 13, background: reanalyseMsg.type === 'success' ? '#052e16' : '#450a0a', color: reanalyseMsg.type === 'success' ? '#4ade80' : '#fca5a5', display: 'flex', alignItems: 'center', gap: 8 }}>
-                {reanalyseMsg.type === 'success' ? <CheckCircle size={13} /> : <AlertTriangle size={13} />}
-                {reanalyseMsg.text}
-              </div>
-            )}
-
             <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Health Metrics</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
               <MetricCard label="Systolic BP"  value={patient.blood_pressure_systolic}  unit="mmHg" color="#3b82f6" />
@@ -792,6 +1039,7 @@ function patientToRow(p) {
 }
 
 export default function PatientsPage() {
+  const toast = useToast()
   const [patients, setPatients] = useState([])
   const [count, setCount] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -876,18 +1124,26 @@ export default function PatientsPage() {
       if (riskFilter) params.risk_level = riskFilter
       const res = await getAllPatients(params)
       exportCSV((res.data.results || res.data).map(patientToRow), `patients_${new Date().toISOString().slice(0, 10)}.csv`)
-    } catch {}
+      toast.success('Export ready', 'CSV file has been downloaded.')
+    } catch {
+      toast.error('Export failed', 'Could not export patients.')
+    }
   }
 
   const handleBulkExport = async () => {
-    if (selectAllMode) {
-      const params = {}
-      if (search) params.search = search
-      if (riskFilter) params.risk_level = riskFilter
-      const res = await getAllPatients(params)
-      exportCSV((res.data.results || res.data).map(patientToRow), `patients_all_${new Date().toISOString().slice(0, 10)}.csv`)
-    } else {
-      exportCSV(sortedPatients.filter(p => selected.has(p.id)).map(patientToRow), `patients_selected_${new Date().toISOString().slice(0, 10)}.csv`)
+    try {
+      if (selectAllMode) {
+        const params = {}
+        if (search) params.search = search
+        if (riskFilter) params.risk_level = riskFilter
+        const res = await getAllPatients(params)
+        exportCSV((res.data.results || res.data).map(patientToRow), `patients_all_${new Date().toISOString().slice(0, 10)}.csv`)
+      } else {
+        exportCSV(sortedPatients.filter(p => selected.has(p.id)).map(patientToRow), `patients_selected_${new Date().toISOString().slice(0, 10)}.csv`)
+      }
+      toast.success('Export ready', 'CSV file has been downloaded.')
+    } catch {
+      toast.error('Export failed', 'Could not export selected patients.')
     }
   }
 
@@ -898,8 +1154,14 @@ export default function PatientsPage() {
       await bulkDeletePatients(idsToDelete)
       setPatients(prev => prev.filter(p => !idsToDelete.includes(p.id)))
       setCount(c => c - idsToDelete.length)
-      clearSelection(); setShowBulkConfirm(false)
-    } catch {} finally { setBulkDeleting(false) }
+      clearSelection()
+      setShowBulkConfirm(false)
+      toast.success(`${idsToDelete.length} patient${idsToDelete.length !== 1 ? 's' : ''} deleted`, 'Records have been permanently removed.')
+    } catch {
+      toast.error('Bulk delete failed', 'Could not delete the selected patients.')
+    } finally {
+      setBulkDeleting(false)
+    }
   }
 
   const selectedCount = selectAllMode ? count : selected.size
@@ -1052,6 +1314,7 @@ export default function PatientsPage() {
           onClose={() => setSelectedPatientId(null)}
           onPatientUpdated={handlePatientUpdated}
           onPatientDeleted={handlePatientDeleted}
+          toast={toast}
         />
       )}
     </div>

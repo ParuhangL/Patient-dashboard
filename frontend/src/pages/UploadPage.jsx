@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { analyseDataset, getReports, getReportDetail, createPatient, analysePatient, deleteReport  } from '../api'
+import { analyseDataset, getReports, getReportDetail, createPatient, analysePatient, deleteReport } from '../api'
 import { Upload, FileText, X, AlertCircle, Eye, UserPlus, Trash2 } from 'lucide-react'
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
@@ -21,6 +21,145 @@ function StatMini({ label, value, color = '#3b82f6' }) {
   )
 }
 
+function ETLDetail({ label, items, color = '#f59e0b', columns, renderRow }) {
+  const [open, setOpen] = useState(false)
+  if (!items || items.length === 0) return null
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6,
+          fontSize: 12, color, fontFamily: 'inherit', padding: 0,
+        }}
+      >
+        <span style={{
+          display: 'inline-block', transform: open ? 'rotate(90deg)' : 'none',
+          transition: 'transform 0.15s', fontSize: 10,
+        }}>▶</span>
+        {label} ({items.length})
+      </button>
+      {open && (
+        <div style={{
+          marginTop: 8, background: '#0f1117', borderRadius: 8,
+          border: '1px solid #2a3347', overflow: 'hidden',
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #2a3347' }}>
+                {columns.map(c => (
+                  <th key={c} style={{
+                    padding: '7px 12px', textAlign: 'left',
+                    fontSize: 10, color: '#475569',
+                    textTransform: 'uppercase', letterSpacing: '0.4px',
+                  }}>{c}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
+                  {renderRow(item)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ETLReportDetail({ etl }) {
+  if (!etl) return null
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 12 }}>
+        <StatMini label="Total Rows"         value={etl.total_rows}         color="#3b82f6" />
+        <StatMini label="Duplicates Removed" value={etl.dropped_duplicates} color="#f59e0b" />
+        <StatMini label="Missing Filled"     value={etl.filled_missing}     color="#10b981" />
+        <StatMini label="Outliers Capped"    value={etl.outliers_capped}    color="#06b6d4" />
+      </div>
+
+      {etl.warnings?.length > 0 && (
+        <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
+          ⚠ {etl.warnings.join(' · ')}
+        </div>
+      )}
+
+      {/* Duplicates */}
+      <ETLDetail
+        label="Duplicate rows removed"
+        items={etl.duplicate_details}
+        color="#f59e0b"
+        columns={['Row', 'Name', 'Date of Birth']}
+        renderRow={item => (<>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.dob || '—'}</td>
+        </>)}
+      />
+
+      {/* Missing filled */}
+      <ETLDetail
+        label="Missing values filled with column median"
+        items={etl.missing_details}
+        color="#10b981"
+        columns={['Row', 'Name', 'Column', 'Filled With']}
+        renderRow={item => (<>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.column}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#10b981', fontWeight: 600 }}>{item.filled_with}</td>
+        </>)}
+      />
+
+      {/* Outliers */}
+      <ETLDetail
+        label="Outliers capped to clinical bounds"
+        items={etl.outlier_details}
+        color="#06b6d4"
+        columns={['Row', 'Name', 'Column', 'Original', 'Capped To', 'Bound']}
+        renderRow={item => (<>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.column}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{item.original}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#06b6d4', fontWeight: 600 }}>{item.capped_to}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>{item.bound}</td>
+        </>)}
+      />
+
+      {/* Empty / unrecoverable rows */}
+      <ETLDetail
+        label="Rows removed (empty or no name)"
+        items={etl.empty_row_details}
+        color="#ef4444"
+        columns={['Row', 'Reason']}
+        renderRow={item => (<>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.reason}</td>
+        </>)}
+      />
+
+      {/* Invalid dates */}
+      <ETLDetail
+        label="Unparseable dates"
+        items={etl.invalid_date_details}
+        color="#8b5cf6"
+        columns={['Row', 'Name', 'Value', 'Note']}
+        renderRow={item => (<>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#ef4444' }}>{item.value}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: '#64748b' }}>{item.reason}</td>
+        </>)}
+      />
+    </div>
+  )
+}
+
 function RiskBadge({ risk }) {
   const map = {
     HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low',
@@ -31,20 +170,128 @@ function RiskBadge({ risk }) {
 
 function ModelInfoBox({ info }) {
   if (!info) return null
+
+  // Keys to never show raw — they get their own formatted display
+  const SKIP = ['features', 'classes', 'cluster_labels', 'feature_importances', 'risk_thresholds']
+
+  // Backwards-compat: old reports have 'accuracy', new ones have 'accuracy_train' + 'accuracy_test'
+  const accuracy_train = info.accuracy_train ?? info.accuracy ?? null
+  const accuracy_test  = info.accuracy_test  ?? null
+  const r2_train       = info.r2_score_train ?? info.r2_score ?? null
+  const r2_test        = info.r2_score_test  ?? null
+
+  const formatVal = (k, v) => {
+    if (v === null || v === undefined) return '—'
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+    if (typeof v === 'number') return String(v)
+    return String(v)
+  }
+
+  // Fields we render manually with special formatting
+  const MANUAL = [
+    'accuracy', 'accuracy_train', 'accuracy_test',
+    'r2_score', 'r2_score_train', 'r2_score_test',
+    'r2_score_dbp', 'r2_score_dbp_train', 'r2_score_dbp_test',
+    'train_size', 'test_size',
+  ]
+
+  const hasSplit = info.train_size != null
+
   return (
     <div style={{
       background: '#0f1117', borderRadius: 8, padding: '10px 14px',
       fontSize: 11, color: '#64748b', marginBottom: 12,
       display: 'flex', flexWrap: 'wrap', gap: '6px 20px',
+      alignItems: 'center',
     }}>
+      {/* Regular fields — skip manual and skipped keys */}
       {Object.entries(info)
-        .filter(([k]) => !['features', 'classes', 'cluster_labels', 'feature_importances'].includes(k))
+        .filter(([k]) => !SKIP.includes(k) && !MANUAL.includes(k))
         .map(([k, v]) => (
           <span key={k}>
             <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{k}: </span>
-            <span style={{ color: '#94a3b8' }}>{String(v)}</span>
+            <span style={{ color: '#94a3b8' }}>{formatVal(k, v)}</span>
           </span>
         ))}
+
+      {/* Train/test split sizes */}
+      {hasSplit && (
+        <span>
+          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>SPLIT: </span>
+          <span style={{ color: '#94a3b8' }}>{info.train_size} train / {info.test_size} test</span>
+        </span>
+      )}
+
+      {/* Accuracy — train vs test side by side */}
+      {accuracy_train != null && (
+        <span>
+          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>ACCURACY: </span>
+          <span style={{ color: '#94a3b8' }}>{(accuracy_train * 100).toFixed(1)}% train</span>
+          {accuracy_test != null && (
+            <>
+              <span style={{ color: '#475569' }}> / </span>
+              <span style={{
+                color: accuracy_test >= accuracy_train - 0.1 ? '#10b981' : '#f59e0b',
+                fontWeight: 600,
+              }}>
+                {(accuracy_test * 100).toFixed(1)}% test
+              </span>
+            </>
+          )}
+        </span>
+      )}
+
+      {/* R² — systolic */}
+      {r2_train != null && (
+        <span>
+          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² SBP: </span>
+          <span style={{ color: '#94a3b8' }}>{r2_train} train</span>
+          {r2_test != null && (
+            <>
+              <span style={{ color: '#475569' }}> / </span>
+              <span style={{
+                color: r2_test >= r2_train - 0.1 ? '#10b981' : '#f59e0b',
+                fontWeight: 600,
+              }}>
+                {r2_test} test
+              </span>
+            </>
+          )}
+        </span>
+      )}
+
+      {/* R² — diastolic */}
+      {(info.r2_score_dbp_train ?? info.r2_score_dbp) != null && (
+        <span>
+          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² DBP: </span>
+          <span style={{ color: '#94a3b8' }}>{info.r2_score_dbp_train ?? info.r2_score_dbp} train</span>
+          {info.r2_score_dbp_test != null && (
+            <>
+              <span style={{ color: '#475569' }}> / </span>
+              <span style={{
+                color: info.r2_score_dbp_test >= (info.r2_score_dbp_train ?? info.r2_score_dbp) - 0.1 ? '#10b981' : '#f59e0b',
+                fontWeight: 600,
+              }}>
+                {info.r2_score_dbp_test} test
+              </span>
+            </>
+          )}
+        </span>
+      )}
+
+      {/* KMeans inertia */}
+      {info.inertia_train != null && (
+        <span>
+          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>INERTIA: </span>
+          <span style={{ color: '#94a3b8' }}>{info.inertia_train} train</span>
+          {info.inertia_test != null && (
+            <>
+              <span style={{ color: '#475569' }}> / </span>
+              <span style={{ color: '#94a3b8' }}>{info.inertia_test} test</span>
+            </>
+          )}
+        </span>
+      )}
     </div>
   )
 }
@@ -197,11 +444,11 @@ function RuleBasedTable({ data }) {
 
 function MLResults({ mlResults }) {
   const mlComponents = {
-    trend_prediction:   { label: ' Trend Prediction (Linear Regression)',     Component: TrendTable },
-    clustering:         { label: ' Patient Clustering (KMeans)',              Component: ClusterTable },
-    disease_prediction: { label: ' Disease Prediction (Logistic Regression)', Component: DiseaseTable },
-    diagnosis_tree:     { label: ' Diagnosis Tree (Decision Tree)',           Component: DiagnosisTable },
-    rule_based:         { label: ' Rule-Based Diagnosis Engine',              Component: RuleBasedTable },
+    trend_prediction:   { label: 'Trend Prediction (Linear Regression)',     Component: TrendTable },
+    clustering:         { label: 'Patient Clustering (KMeans)',              Component: ClusterTable },
+    disease_prediction: { label: 'Disease Prediction (Logistic Regression)', Component: DiseaseTable },
+    diagnosis_tree:     { label: 'Diagnosis Tree (Decision Tree)',           Component: DiagnosisTable },
+    rule_based:         { label: 'Rule-Based Diagnosis Engine',              Component: RuleBasedTable },
   }
   return (
     <>
@@ -231,28 +478,27 @@ function printAnalysisReport(reportData) {
     <h3>${title}</h3>
     <table>${rows}</table>` : ''
 
-  // Build each model's table HTML
   const trendRows = results.trend_prediction?.predictions?.map((val, i) => {
-    const name = typeof val === 'object' ? val.patient_name : `Patient ${i+1}`
+    const name = typeof val === 'object' ? val.patient_name : `Patient ${i + 1}`
     const sbp = typeof val === 'object' ? (val.predicted_systolic_bp ?? val.predicted_bp ?? val.value) : val
     const dbp = typeof val === 'object' ? val.predicted_diastolic_bp : null
     return `<tr><td>${name}</td><td>${sbp != null ? Number(sbp).toFixed(1) : '—'} mmHg</td><td>${dbp != null ? Number(dbp).toFixed(1) : '—'} mmHg</td></tr>`
   }).join('') || ''
 
   const clusterRows = results.clustering?.predictions?.map((p, i) =>
-    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.cluster_id}</td><td>${p.profile}</td></tr>`
+    `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td>${p.cluster_id}</td><td>${p.profile}</td></tr>`
   ).join('') || ''
 
   const diseaseRows = results.disease_prediction?.predictions?.map((p, i) =>
-    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.prediction}</td><td>${(p.probability_diabetic*100).toFixed(1)}%</td><td>${(p.probability_non_diabetic*100).toFixed(1)}%</td></tr>`
+    `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td>${p.prediction}</td><td>${(p.probability_diabetic * 100).toFixed(1)}%</td><td>${(p.probability_non_diabetic * 100).toFixed(1)}%</td></tr>`
   ).join('') || ''
 
   const diagnosisRows = results.diagnosis_tree?.predictions?.map((p, i) =>
-    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.risk_label}</td><td>${(p.confidence*100).toFixed(0)}%</td></tr>`
+    `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td>${p.risk_label}</td><td>${(p.confidence * 100).toFixed(0)}%</td></tr>`
   ).join('') || ''
 
   const ruleRows = results.rule_based?.predictions?.map((p, i) =>
-    `<tr><td>${p.patient_name || `Patient ${i+1}`}</td><td>${p.risk_label}</td><td>${p.risk_score}</td><td>${(p.confidence*100).toFixed(0)}%</td><td>${p.triggered_rules?.join(', ') || 'None'}</td></tr>`
+    `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td>${p.risk_label}</td><td>${p.risk_score}</td><td>${(p.confidence * 100).toFixed(0)}%</td><td>${p.triggered_rules?.join(', ') || 'None'}</td></tr>`
   ).join('') || ''
 
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
@@ -276,11 +522,10 @@ function printAnalysisReport(reportData) {
   </style></head><body>
   <h2>Analysis Report${reportData.file_name ? ' — ' + reportData.file_name : ''}</h2>
   <div class="meta">
-    Generated ${new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'})}
+    Generated ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
     ${reportData.total_rows ? ` &nbsp;·&nbsp; ${reportData.total_rows} rows` : ''}
     ${reportData.notes ? ` &nbsp;·&nbsp; ${reportData.notes}` : ''}
   </div>
-
   <h3>ETL Pipeline</h3>
   <div class="stats">
     ${statBox('Total Rows', etl.total_rows, '#3b82f6')}
@@ -289,13 +534,11 @@ function printAnalysisReport(reportData) {
     ${statBox('Outliers Capped', etl.outliers_capped, '#06b6d4')}
   </div>
   ${etl.warnings?.length ? `<div style="font-size:12px;color:#d97706;margin-bottom:16px">⚠ ${etl.warnings.join(' · ')}</div>` : ''}
-
-  ${trendRows    ? modelTable('Trend Prediction (Linear Regression)', `<thead><tr><th>Patient</th><th>Predicted Systolic BP</th><th>Predicted Diastolic BP</th></tr></thead><tbody>${trendRows}</tbody>`)    : ''}
-  ${clusterRows  ? modelTable('Patient Clustering (KMeans)',             `<thead><tr><th>Patient</th><th>Cluster</th><th>Risk Profile</th></tr></thead><tbody>${clusterRows}</tbody>`) : ''}
-  ${diseaseRows  ? modelTable('Disease Prediction (Logistic Regression)',`<thead><tr><th>Patient</th><th>Prediction</th><th>Diabetic %</th><th>Non-Diabetic %</th></tr></thead><tbody>${diseaseRows}</tbody>`) : ''}
-  ${diagnosisRows? modelTable('Diagnosis Tree (Decision Tree)',          `<thead><tr><th>Patient</th><th>Risk Label</th><th>Confidence</th></tr></thead><tbody>${diagnosisRows}</tbody>`) : ''}
-  ${ruleRows     ? modelTable('Rule-Based Diagnosis Engine',             `<thead><tr><th>Patient</th><th>Risk</th><th>Score</th><th>Confidence</th><th>Triggered Rules</th></tr></thead><tbody>${ruleRows}</tbody>`) : ''}
-
+  ${trendRows     ? modelTable('Trend Prediction (Linear Regression)',    `<thead><tr><th>Patient</th><th>Predicted Systolic BP</th><th>Predicted Diastolic BP</th></tr></thead><tbody>${trendRows}</tbody>`) : ''}
+  ${clusterRows   ? modelTable('Patient Clustering (KMeans)',             `<thead><tr><th>Patient</th><th>Cluster</th><th>Risk Profile</th></tr></thead><tbody>${clusterRows}</tbody>`) : ''}
+  ${diseaseRows   ? modelTable('Disease Prediction (Logistic Regression)',`<thead><tr><th>Patient</th><th>Prediction</th><th>Diabetic %</th><th>Non-Diabetic %</th></tr></thead><tbody>${diseaseRows}</tbody>`) : ''}
+  ${diagnosisRows ? modelTable('Diagnosis Tree (Decision Tree)',          `<thead><tr><th>Patient</th><th>Risk Label</th><th>Confidence</th></tr></thead><tbody>${diagnosisRows}</tbody>`) : ''}
+  ${ruleRows      ? modelTable('Rule-Based Diagnosis Engine',             `<thead><tr><th>Patient</th><th>Risk</th><th>Score</th><th>Confidence</th><th>Triggered Rules</th></tr></thead><tbody>${ruleRows}</tbody>`) : ''}
   <div class="footer"><span>Patient Diagnostic Dashboard</span><span>Confidential — For clinical use only</span></div>
   </body></html>`
 
@@ -366,15 +609,7 @@ function ReportModal({ reportId, onClose }) {
           <>
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 12 }}>ETL Pipeline</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                <StatMini label="Total Rows"         value={report.etl_report?.total_rows}         color="#3b82f6" />
-                <StatMini label="Duplicates Removed" value={report.etl_report?.dropped_duplicates} color="#f59e0b" />
-                <StatMini label="Missing Filled"     value={report.etl_report?.filled_missing}     color="#10b981" />
-                <StatMini label="Outliers Capped"    value={report.etl_report?.outliers_capped}    color="#06b6d4" />
-              </div>
-              {report.etl_report?.warnings?.length > 0 && (
-                <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 8 }}>⚠ {report.etl_report.warnings.join(' · ')}</div>
-              )}
+              <ETLReportDetail etl={report.etl_report} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
               <StatMini label="Total Rows"      value={report.total_rows}      color="#3b82f6" />
@@ -399,7 +634,7 @@ const EMPTY_FORM = {
   is_smoker: false, is_diabetic: false, has_hypertension: false,
 }
 
-function Field({ label, name, value, type = 'text', options, onChange, error, required }) {
+function Field({ label, name, value, type = 'text', options, onChange, onBlur, error, required }) {
   const hasErr = !!error
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -408,7 +643,7 @@ function Field({ label, name, value, type = 'text', options, onChange, error, re
       </label>
       {options ? (
         <select
-          name={name} value={value} onChange={onChange}
+          name={name} value={value} onChange={onChange} onBlur={onBlur}
           style={{
             padding: '8px 10px', background: '#0f1117',
             border: `1px solid ${hasErr ? '#ef4444' : '#2a3347'}`,
@@ -420,7 +655,7 @@ function Field({ label, name, value, type = 'text', options, onChange, error, re
         </select>
       ) : (
         <input
-          type={type} name={name} value={value} onChange={onChange}
+          type={type} name={name} value={value} onChange={onChange} onBlur={onBlur}
           style={{
             padding: '8px 10px', background: '#0f1117',
             border: `1px solid ${hasErr ? '#ef4444' : '#2a3347'}`,
@@ -436,53 +671,59 @@ function Field({ label, name, value, type = 'text', options, onChange, error, re
 
 function validateForm(form) {
   const errors = {}
-  if (!form.first_name.trim()) errors.first_name = 'Required'
-  else if (form.first_name.trim().length < 2) errors.first_name = 'At least 2 characters'
-  else if (!/^[a-zA-Z\s\-']+$/.test(form.first_name)) errors.first_name = 'Letters only'
+  const today = new Date().toISOString().slice(0, 10)
 
-  if (!form.last_name.trim()) errors.last_name = 'Required'
-  else if (form.last_name.trim().length < 2) errors.last_name = 'At least 2 characters'
-  else if (!/^[a-zA-Z\s\-']+$/.test(form.last_name)) errors.last_name = 'Letters only'
+  if (!form.first_name.trim()) errors.first_name = 'Required.'
+  else if (form.first_name.trim().length < 2) errors.first_name = 'At least 2 characters.'
+  else if (form.first_name.trim().length > 50) errors.first_name = 'Max 50 characters.'
+  else if (!/^[a-zA-Z\s\-']+$/.test(form.first_name)) errors.first_name = 'Letters, hyphens, and apostrophes only.'
 
-  if (!form.date_of_birth) errors.date_of_birth = 'Required'
+  if (!form.last_name.trim()) errors.last_name = 'Required.'
+  else if (form.last_name.trim().length < 2) errors.last_name = 'At least 2 characters.'
+  else if (form.last_name.trim().length > 50) errors.last_name = 'Max 50 characters.'
+  else if (!/^[a-zA-Z\s\-']+$/.test(form.last_name)) errors.last_name = 'Letters, hyphens, and apostrophes only.'
+
+  if (!form.date_of_birth) errors.date_of_birth = 'Required.'
+  else if (form.date_of_birth >= today) errors.date_of_birth = 'Must be in the past.'
   else {
-    const dob = new Date(form.date_of_birth)
-    const today = new Date()
-    if (dob > today) errors.date_of_birth = 'Cannot be in the future'
-    else {
-      const age = (today - dob) / (1000 * 60 * 60 * 24 * 365)
-      if (age > 130) errors.date_of_birth = 'Invalid date of birth'
-    }
+    const age = (new Date() - new Date(form.date_of_birth)) / (1000 * 60 * 60 * 24 * 365)
+    if (age > 120) errors.date_of_birth = 'Age cannot exceed 120 years.'
   }
 
   if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-    errors.email = 'Invalid email address'
+    errors.email = 'Enter a valid email address.'
 
-  if (form.phone && !/^[\d\s\-\+\(\)]{7,20}$/.test(form.phone))
-    errors.phone = '7–20 digits, spaces, dashes allowed'
+  if (form.phone) {
+    if (!/^[0-9\s\+\-\(\)]+$/.test(form.phone)) errors.phone = 'Digits, spaces, +, -, or parentheses only.'
+    else {
+      const digits = form.phone.replace(/\D/g, '')
+      if (digits.length < 7) errors.phone = 'Phone number is too short.'
+      else if (digits.length > 15) errors.phone = 'Phone number is too long.'
+    }
+  }
 
   const numChecks = [
-    { key: 'blood_pressure_systolic',  min: 50,  max: 300, label: 'Systolic BP' },
-    { key: 'blood_pressure_diastolic', min: 30,  max: 200, label: 'Diastolic BP' },
-    { key: 'heart_rate',               min: 20,  max: 300, label: 'Heart rate' },
+    { key: 'blood_pressure_systolic',  min: 60,  max: 250, label: 'Systolic BP' },
+    { key: 'blood_pressure_diastolic', min: 40,  max: 150, label: 'Diastolic BP' },
+    { key: 'heart_rate',               min: 30,  max: 220, label: 'Heart Rate' },
     { key: 'glucose_level',            min: 20,  max: 600, label: 'Glucose' },
-    { key: 'bmi',                      min: 10,  max: 80,  label: 'BMI' },
-    { key: 'cholesterol',              min: 50,  max: 700, label: 'Cholesterol' },
+    { key: 'bmi',                      min: 10,  max: 70,  label: 'BMI' },
+    { key: 'cholesterol',              min: 50,  max: 500, label: 'Cholesterol' },
   ]
   numChecks.forEach(({ key, min, max, label }) => {
     const v = form[key]
     if (v !== '' && v !== null) {
       const n = parseFloat(v)
-      if (isNaN(n)) errors[key] = 'Must be a number'
-      else if (n < min || n > max) errors[key] = `${label} must be ${min}–${max}`
+      if (isNaN(n)) errors[key] = 'Must be a number.'
+      else if (n < min || n > max) errors[key] = `${label} must be ${min}–${max}.`
     }
   })
 
   const sys = parseFloat(form.blood_pressure_systolic)
   const dia = parseFloat(form.blood_pressure_diastolic)
   if (!isNaN(sys) && !isNaN(dia)) {
-    if (dia >= sys) errors.blood_pressure_diastolic = 'Must be lower than systolic'
-    else if (sys - dia < 10) errors.blood_pressure_diastolic = 'Pulse pressure must be ≥ 10 mmHg'
+    if (dia >= sys) errors.blood_pressure_diastolic = 'Must be lower than systolic.'
+    else if (sys - dia < 10) errors.blood_pressure_diastolic = 'Pulse pressure must be ≥ 10 mmHg.'
   }
 
   return errors
@@ -491,6 +732,7 @@ function validateForm(form) {
 function ManualPatientForm({ onSuccess }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({})
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(null)
   const [serverError, setServerError] = useState(null)
@@ -498,13 +740,29 @@ function ManualPatientForm({ onSuccess }) {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }))
-    // Clear field error on change
     if (errors[name]) setErrors(prev => { const e = { ...prev }; delete e[name]; return e })
+    if (serverError) setServerError(null)
+  }
+
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setTouched(t => ({ ...t, [name]: true }))
+    // Validate just this field on blur
+    const fieldErrors = validateForm(form)
+    if (fieldErrors[name]) {
+      setErrors(prev => ({ ...prev, [name]: fieldErrors[name] }))
+    }
   }
 
   const handleSubmit = async () => {
     const errs = validateForm(form)
-    if (Object.keys(errs).length > 0) { setErrors(errs); return }
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs)
+      // Touch all fields so all errors show
+      const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {})
+      setTouched(allTouched)
+      return
+    }
 
     setSaving(true)
     setServerError(null)
@@ -512,36 +770,31 @@ function ManualPatientForm({ onSuccess }) {
 
     try {
       const payload = { ...form }
-      ;['blood_pressure_systolic','blood_pressure_diastolic','heart_rate','glucose_level','bmi','cholesterol'].forEach(k => {
+      ;['blood_pressure_systolic', 'blood_pressure_diastolic', 'heart_rate', 'glucose_level', 'bmi', 'cholesterol'].forEach(k => {
         payload[k] = payload[k] !== '' ? parseFloat(payload[k]) : null
       })
       if (!payload.email) payload.email = null
       if (!payload.phone) payload.phone = null
 
       const res = await createPatient(payload)
-
       const newPatient = res.data
 
       try {
         await analysePatient(newPatient.id)
       } catch {
-        // Analysis failure shouldn't block success message
+        // Analysis failure shouldn't block success
       }
 
       setSuccess(`Patient ${form.first_name} ${form.last_name} created and analysed successfully!`)
       setForm(EMPTY_FORM)
       setErrors({})
+      setTouched({})
       onSuccess?.()
-
-
     } catch (err) {
       const data = err.response?.data
       if (data && typeof data === 'object') {
-        // Map backend field errors onto form fields
         const mapped = {}
-        Object.entries(data).forEach(([k, v]) => {
-          mapped[k] = Array.isArray(v) ? v[0] : v
-        })
+        Object.entries(data).forEach(([k, v]) => { mapped[k] = Array.isArray(v) ? v[0] : v })
         setErrors(mapped)
         setServerError('Please fix the errors above.')
       } else {
@@ -573,24 +826,24 @@ function ManualPatientForm({ onSuccess }) {
 
       {sectionLabel('Personal Information')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="First Name" name="first_name" value={form.first_name} onChange={handleChange} error={errors.first_name} required />
-        <Field label="Last Name"  name="last_name"  value={form.last_name}  onChange={handleChange} error={errors.last_name}  required />
-        <Field label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} error={errors.date_of_birth} required />
-        <Field label="Gender" name="gender" value={form.gender} onChange={handleChange} error={errors.gender} required
+        <Field label="First Name" name="first_name" value={form.first_name} onChange={handleChange} onBlur={handleBlur} error={errors.first_name} required />
+        <Field label="Last Name"  name="last_name"  value={form.last_name}  onChange={handleChange} onBlur={handleBlur} error={errors.last_name}  required />
+        <Field label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} onBlur={handleBlur} error={errors.date_of_birth} required />
+        <Field label="Gender" name="gender" value={form.gender} onChange={handleChange} onBlur={handleBlur} error={errors.gender} required
           options={[{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }, { value: 'O', label: 'Other' }]}
         />
-        <Field label="Email" name="email" type="email" value={form.email} onChange={handleChange} error={errors.email} />
-        <Field label="Phone" name="phone" value={form.phone} onChange={handleChange} error={errors.phone} />
+        <Field label="Email" name="email" type="email" value={form.email} onChange={handleChange} onBlur={handleBlur} error={errors.email} />
+        <Field label="Phone" name="phone" value={form.phone}              onChange={handleChange} onBlur={handleBlur} error={errors.phone} />
       </div>
 
       {sectionLabel('Health Metrics')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-        <Field label="Systolic BP (mmHg)"  name="blood_pressure_systolic"  type="number" value={form.blood_pressure_systolic}  onChange={handleChange} error={errors.blood_pressure_systolic} />
-        <Field label="Diastolic BP (mmHg)" name="blood_pressure_diastolic" type="number" value={form.blood_pressure_diastolic} onChange={handleChange} error={errors.blood_pressure_diastolic} />
-        <Field label="Heart Rate (bpm)"    name="heart_rate"               type="number" value={form.heart_rate}               onChange={handleChange} error={errors.heart_rate} />
-        <Field label="Glucose (mg/dL)"     name="glucose_level"            type="number" value={form.glucose_level}            onChange={handleChange} error={errors.glucose_level} />
-        <Field label="BMI"                 name="bmi"                      type="number" value={form.bmi}                      onChange={handleChange} error={errors.bmi} />
-        <Field label="Cholesterol (mg/dL)" name="cholesterol"              type="number" value={form.cholesterol}              onChange={handleChange} error={errors.cholesterol} />
+        <Field label="Systolic BP (mmHg)"  name="blood_pressure_systolic"  type="number" value={form.blood_pressure_systolic}  onChange={handleChange} onBlur={handleBlur} error={errors.blood_pressure_systolic} />
+        <Field label="Diastolic BP (mmHg)" name="blood_pressure_diastolic" type="number" value={form.blood_pressure_diastolic} onChange={handleChange} onBlur={handleBlur} error={errors.blood_pressure_diastolic} />
+        <Field label="Heart Rate (bpm)"    name="heart_rate"               type="number" value={form.heart_rate}               onChange={handleChange} onBlur={handleBlur} error={errors.heart_rate} />
+        <Field label="Glucose (mg/dL)"     name="glucose_level"            type="number" value={form.glucose_level}            onChange={handleChange} onBlur={handleBlur} error={errors.glucose_level} />
+        <Field label="BMI"                 name="bmi"                      type="number" value={form.bmi}                      onChange={handleChange} onBlur={handleBlur} error={errors.bmi} />
+        <Field label="Cholesterol (mg/dL)" name="cholesterol"              type="number" value={form.cholesterol}              onChange={handleChange} onBlur={handleBlur} error={errors.cholesterol} />
       </div>
 
       {sectionLabel('Lifestyle')}
@@ -619,8 +872,7 @@ function ManualPatientForm({ onSuccess }) {
 
       <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
         <button
-          onClick={handleSubmit}
-          disabled={saving}
+          onClick={handleSubmit} disabled={saving}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
             padding: '10px 20px', background: saving ? '#1e2535' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
@@ -633,7 +885,7 @@ function ManualPatientForm({ onSuccess }) {
           {saving ? 'Creating...' : 'Create Patient'}
         </button>
         <button
-          onClick={() => { setForm(EMPTY_FORM); setErrors({}); setServerError(null); setSuccess(null) }}
+          onClick={() => { setForm(EMPTY_FORM); setErrors({}); setTouched({}); setServerError(null); setSuccess(null) }}
           style={{
             padding: '10px 20px', background: 'transparent',
             border: '1px solid #2a3347', borderRadius: 8,
@@ -648,8 +900,11 @@ function ManualPatientForm({ onSuccess }) {
 }
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
+const ALLOWED_EXTENSIONS = ['.csv', '.xlsx', '.xls']
+const MAX_FILE_SIZE_MB = 10
+
 export default function UploadPage({ uploadResult, setUploadResult }) {
-  const [tab, setTab] = useState('csv') // 'csv' | 'manual'
+  const [tab, setTab] = useState('csv')
   const [file, setFile] = useState(null)
   const [progress, setProgress] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -657,6 +912,8 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
   const [reports, setReports] = useState([])
   const [reportsLoading, setReportsLoading] = useState(true)
   const [openReportId, setOpenReportId] = useState(null)
+  const [deletingReportId, setDeletingReportId] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const loadReports = () => {
     setReportsLoading(true)
@@ -668,42 +925,49 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
 
   useEffect(() => { loadReports() }, [uploadResult])
 
+  const validateFile = (f) => {
+    const ext = '.' + f.name.split('.').pop().toLowerCase()
+    if (!ALLOWED_EXTENSIONS.includes(ext))
+      return `Invalid file type "${ext}". Please upload a .csv, .xlsx, or .xls file.`
+    if (f.size > MAX_FILE_SIZE_MB * 1024 * 1024)
+      return `File is too large (${(f.size / 1024 / 1024).toFixed(1)} MB). Maximum size is ${MAX_FILE_SIZE_MB} MB.`
+    return null
+  }
+
   const handleFile = (e) => {
     const f = e.target.files[0]
-    if (f) { setFile(f); setUploadResult(null); setError(null) }
+    if (!f) return
+    const err = validateFile(f)
+    if (err) { setError(err); setFile(null); return }
+    setFile(f); setUploadResult(null); setError(null)
   }
 
   const handleDrop = (e) => {
     e.preventDefault()
     const f = e.dataTransfer.files[0]
-    if (f) { setFile(f); setUploadResult(null); setError(null) }
+    if (!f) return
+    const err = validateFile(f)
+    if (err) { setError(err); return }
+    setFile(f); setUploadResult(null); setError(null)
   }
 
   const handleUpload = async () => {
-    if (!file) return
+    if (!file) {
+      setError('Please select a file before uploading.')
+      return
+    }
     setLoading(true); setError(null); setUploadResult(null); setProgress(0)
     try {
       const res = await analyseDataset(file, setProgress)
       setUploadResult(res.data)
     } catch (err) {
-      setError(err.userMessage || 'Upload failed')
+      setError(err.userMessage || 'Upload failed. Please check your file and try again.')
     } finally {
       setLoading(false)
     }
   }
 
   const clearFile = () => { setFile(null); setUploadResult(null); setError(null); setProgress(0) }
-
-  const tabStyle = (active) => ({
-    padding: '9px 20px', borderRadius: 7, border: 'none',
-    background: active ? 'rgba(59,130,246,0.12)' : 'transparent',
-    color: active ? '#3b82f6' : '#64748b',
-    fontSize: 13, fontWeight: active ? 600 : 400,
-    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-  })
-
-const [deletingReportId, setDeletingReportId] = useState(null)
-const [deleteLoading, setDeleteLoading] = useState(false)
 
   const handleDeleteReport = async () => {
     setDeleteLoading(true)
@@ -712,11 +976,18 @@ const [deleteLoading, setDeleteLoading] = useState(false)
       setReports(prev => prev.filter(r => r.id !== deletingReportId))
       setDeletingReportId(null)
     } catch {
-      // handle silently
     } finally {
       setDeleteLoading(false)
     }
   }
+
+  const tabStyle = (active) => ({
+    padding: '9px 20px', borderRadius: 7, border: 'none',
+    background: active ? 'rgba(59,130,246,0.12)' : 'transparent',
+    color: active ? '#3b82f6' : '#64748b',
+    fontSize: 13, fontWeight: active ? 600 : 400,
+    cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
+  })
 
   return (
     <div className="animate-fade-in">
@@ -731,12 +1002,8 @@ const [deleteLoading, setDeleteLoading] = useState(false)
         background: '#161b27', border: '1px solid #2a3347',
         borderRadius: 9, padding: 4, width: 'fit-content',
       }}>
-        <button style={tabStyle(tab === 'csv')}    onClick={() => setTab('csv')}>
-           CSV Upload
-        </button>
-        <button style={tabStyle(tab === 'manual')} onClick={() => setTab('manual')}>
-           Manual Entry
-        </button>
+        <button style={tabStyle(tab === 'csv')}    onClick={() => setTab('csv')}>CSV Upload</button>
+        <button style={tabStyle(tab === 'manual')} onClick={() => setTab('manual')}>Manual Entry</button>
       </div>
 
       {/* CSV Tab */}
@@ -769,7 +1036,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
                 <div>
                   <Upload size={28} color="#64748b" style={{ margin: '0 auto 12px' }} />
                   <div style={{ fontSize: 14, color: '#94a3b8', fontWeight: 500 }}>Drop your CSV or Excel file here</div>
-                  <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>or click to browse</div>
+                  <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>or click to browse · .csv, .xlsx, .xls · max {MAX_FILE_SIZE_MB} MB</div>
                 </div>
               )}
             </div>
@@ -813,7 +1080,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
 
           {uploadResult && (
             <div className="animate-fade-in">
-              <Section title=" ETL Pipeline Report">
+              <Section title="ETL Pipeline Report">
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
                   <button
                     onClick={() => printAnalysisReport({ ...uploadResult, file_name: file?.name })}
@@ -828,17 +1095,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
                     <FileText size={13} /> Print Report
                   </button>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: uploadResult.etl_report?.warnings?.length > 0 ? 12 : 0 }}>
-                  <StatMini label="Total Rows"         value={uploadResult.etl_report?.total_rows}         color="#3b82f6" />
-                  <StatMini label="Duplicates Removed" value={uploadResult.etl_report?.dropped_duplicates} color="#f59e0b" />
-                  <StatMini label="Missing Filled"     value={uploadResult.etl_report?.filled_missing}     color="#10b981" />
-                  <StatMini label="Outliers Capped"    value={uploadResult.etl_report?.outliers_capped}    color="#06b6d4" />
-                </div>
-                {uploadResult.etl_report?.warnings?.length > 0 && (
-                  <div style={{ fontSize: 12, color: '#f59e0b', marginTop: 8 }}>
-                    ⚠ {uploadResult.etl_report.warnings.join(' · ')}
-                  </div>
-                )}
+                <ETLReportDetail etl={uploadResult.etl_report} />
               </Section>
               <MLResults mlResults={uploadResult.ml_results} />
             </div>
@@ -846,7 +1103,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
 
           {/* Past Reports */}
           <div className="card" style={{ padding: 24, marginTop: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 16 }}> Saved Analysis Reports</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 16 }}>Saved Analysis Reports</div>
             {reportsLoading ? (
               <div style={{ color: '#64748b', fontSize: 13 }}>Loading reports...</div>
             ) : reports.length === 0 ? (
@@ -876,30 +1133,28 @@ const [deleteLoading, setDeleteLoading] = useState(false)
                       <td style={{ padding: '8px 12px', fontSize: 13, color: '#10b981' }}>{r.linked_patients}</td>
                       <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569' }}>{new Date(r.created_at).toLocaleString()}</td>
                       <td style={{ padding: '8px 12px' }}>
-                        <td style={{ padding: '8px 12px' }}>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button
-                              onClick={() => setOpenReportId(r.id)}
-                              style={{
-                                background: 'none', border: '1px solid #2a3347', borderRadius: 6,
-                                padding: '4px 10px', color: '#64748b', cursor: 'pointer', fontSize: 12,
-                                display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
-                              }}
-                            >
-                              <Eye size={12} /> View
-                            </button>
-                            <button
-                              onClick={() => setDeletingReportId(r.id)}
-                              style={{
-                                background: 'none', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6,
-                                padding: '4px 10px', color: '#ef4444', cursor: 'pointer', fontSize: 12,
-                                display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
-                              }}
-                            >
-                              <Trash2 size={12} /> Delete
-                            </button>
-                          </div>
-                        </td>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            onClick={() => setOpenReportId(r.id)}
+                            style={{
+                              background: 'none', border: '1px solid #2a3347', borderRadius: 6,
+                              padding: '4px 10px', color: '#64748b', cursor: 'pointer', fontSize: 12,
+                              display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
+                            }}
+                          >
+                            <Eye size={12} /> View
+                          </button>
+                          <button
+                            onClick={() => setDeletingReportId(r.id)}
+                            style={{
+                              background: 'none', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 6,
+                              padding: '4px 10px', color: '#ef4444', cursor: 'pointer', fontSize: 12,
+                              display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
+                            }}
+                          >
+                            <Trash2 size={12} /> Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -921,7 +1176,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
         <ReportModal reportId={openReportId} onClose={() => setOpenReportId(null)} />
       )}
 
-            {deletingReportId && (
+      {deletingReportId && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 1000,
           background: 'rgba(0,0,0,0.75)', display: 'flex',
@@ -934,9 +1189,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 20 }}>
               <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#fca5a5', marginBottom: 6 }}>
-                  Delete this report?
-                </div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#fca5a5', marginBottom: 6 }}>Delete this report?</div>
                 <div style={{ fontSize: 13, color: '#94a3b8' }}>
                   The report log will be removed. Patient analysis results are kept in their medical history.
                 </div>
@@ -954,8 +1207,7 @@ const [deleteLoading, setDeleteLoading] = useState(false)
                 Cancel
               </button>
               <button
-                onClick={handleDeleteReport}
-                disabled={deleteLoading}
+                onClick={handleDeleteReport} disabled={deleteLoading}
                 style={{
                   padding: '8px 16px', background: '#dc2626', border: 'none',
                   borderRadius: 7, color: 'white', fontSize: 13, fontWeight: 600,

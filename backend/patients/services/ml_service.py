@@ -8,6 +8,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, r2_score
 import warnings
+from datetime import date as date_type
 
 warnings.filterwarnings("ignore")
 
@@ -30,6 +31,10 @@ class TrendPredictor(BasePredictor):
         self.model_dbp = LinearRegression()
         self.r2_score = None
         self.r2_score_dbp = None
+        self.r2_score_test = None
+        self.r2_score_dbp_test = None
+        self.train_size = None
+        self.test_size = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         features = self._select_features(X, ["age"])
@@ -38,17 +43,56 @@ class TrendPredictor(BasePredictor):
                 "TrendPredictor requires 'age' column and a target series."
             )
         self.feature_columns = list(features.columns)
-        # Systolic
-        self.model.fit(features, y)
-        preds = self.model.predict(features)
-        self.r2_score = round(r2_score(y, preds), 4)
-        # Diastolic
-        if "blood_pressure_diastolic" in X.columns:
-            self.model_dbp.fit(features, X["blood_pressure_diastolic"])
-            preds_dbp = self.model_dbp.predict(features)
-            self.r2_score_dbp = round(
-                r2_score(X["blood_pressure_diastolic"], preds_dbp), 4
+
+        # 80/20 split — need at least 10 rows to bother splitting
+        if len(features) >= 10:
+            X_train, X_test, y_train, y_test = train_test_split(
+                features, y, test_size=0.2, random_state=42
             )
+            # Diastolic target aligned to same split
+            dbp_col = (
+                X["blood_pressure_diastolic"]
+                if "blood_pressure_diastolic" in X.columns
+                else None
+            )
+            if dbp_col is not None:
+                _, _, dbp_train, dbp_test = train_test_split(
+                    features, dbp_col, test_size=0.2, random_state=42
+                )
+        else:
+            # Too few rows — train on all, no test score
+            X_train, X_test, y_train, y_test = features, None, y, None
+            dbp_col = (
+                X["blood_pressure_diastolic"]
+                if "blood_pressure_diastolic" in X.columns
+                else None
+            )
+            dbp_train = dbp_col
+            dbp_test = None
+
+        self.train_size = len(X_train)
+        self.test_size = len(X_test) if X_test is not None else 0
+
+        # Systolic — fit on train
+        self.model.fit(X_train, y_train)
+        train_preds = self.model.predict(X_train)
+        self.r2_score = round(r2_score(y_train, train_preds), 4)
+
+        # Systolic — evaluate on test
+        if X_test is not None:
+            test_preds = self.model.predict(X_test)
+            self.r2_score_test = round(r2_score(y_test, test_preds), 4)
+
+        # Diastolic — fit on train
+        if dbp_col is not None:
+            self.model_dbp.fit(X_train, dbp_train)
+            train_preds_dbp = self.model_dbp.predict(X_train)
+            self.r2_score_dbp = round(r2_score(dbp_train, train_preds_dbp), 4)
+
+            if dbp_test is not None:
+                test_preds_dbp = self.model_dbp.predict(X_test)
+                self.r2_score_dbp_test = round(r2_score(dbp_test, test_preds_dbp), 4)
+
         self.is_fitted = True
 
     def predict(self, X: pd.DataFrame) -> List[Dict]:
@@ -76,7 +120,12 @@ class TrendPredictor(BasePredictor):
             "algorithm": "Linear Regression",
             "target": "blood_pressure_systolic",
             "features": self.feature_columns,
-            "r2_score": self.r2_score,
+            "r2_score_train": self.r2_score,
+            "r2_score_test": self.r2_score_test,
+            "r2_score_dbp_train": self.r2_score_dbp,
+            "r2_score_dbp_test": self.r2_score_dbp_test,
+            "train_size": self.train_size,
+            "test_size": self.test_size,
             "coefficient": round(self.model.coef_[0], 4) if self.is_fitted else None,
             "intercept": round(self.model.intercept_, 4) if self.is_fitted else None,
         }
@@ -105,6 +154,11 @@ class PatientClusterer(BasePredictor):
         self.model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         self.scaler = StandardScaler()
         self.inertia = None
+        self.train_size = None
+        self.test_size = None
+        # KMeans has no accuracy — we report inertia on train vs test
+        # as a sanity check (lower inertia on test = clusters generalise well)
+        self.inertia_test = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         features = self._select_features(
@@ -115,9 +169,32 @@ class PatientClusterer(BasePredictor):
                 "PatientClusterer requires at least one of: age, bmi, blood_pressure_systolic, glucose_level"
             )
         self.feature_columns = list(features.columns)
-        scaled = self.scaler.fit_transform(features)
-        self.model.fit(scaled)
+
+        if len(features) >= 10:
+            X_train, X_test = train_test_split(features, test_size=0.2, random_state=42)
+        else:
+            X_train, X_test = features, None
+
+        self.train_size = len(X_train)
+        self.test_size = len(X_test) if X_test is not None else 0
+
+        # Fit scaler and model on train only
+        scaled_train = self.scaler.fit_transform(X_train)
+        self.model.fit(scaled_train)
         self.inertia = round(self.model.inertia_, 4)
+
+        # Evaluate on test — transform with train scaler, score with trained centroids
+        if X_test is not None:
+            scaled_test = self.scaler.transform(X_test)
+            # inertia_ isn't available post-predict, so compute manually
+            labels_test = self.model.predict(scaled_test)
+            centers = self.model.cluster_centers_
+            inertia_test = sum(
+                float(np.sum((scaled_test[i] - centers[labels_test[i]]) ** 2))
+                for i in range(len(scaled_test))
+            )
+            self.inertia_test = round(inertia_test, 4)
+
         self.is_fitted = True
 
     def predict(self, X: pd.DataFrame) -> List[Dict]:
@@ -140,7 +217,10 @@ class PatientClusterer(BasePredictor):
             "algorithm": "KMeans Clustering",
             "n_clusters": self.n_clusters,
             "features": self.feature_columns,
-            "inertia": self.inertia,
+            "inertia_train": self.inertia,
+            "inertia_test": self.inertia_test,
+            "train_size": self.train_size,
+            "test_size": self.test_size,
             "cluster_labels": self.CLUSTER_LABELS,
         }
 
@@ -160,7 +240,10 @@ class DiseasePredictor(BasePredictor):
         super().__init__(model_name="DiseasePredictor")
         self.model = LogisticRegression(random_state=42, max_iter=1000)
         self.scaler = StandardScaler()
-        self.accuracy = None
+        self.accuracy_train = None
+        self.accuracy_test = None
+        self.train_size = None
+        self.test_size = None
         self.classes = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
@@ -180,14 +263,31 @@ class DiseasePredictor(BasePredictor):
         if features.empty:
             raise ValueError("DiseasePredictor: no usable feature columns found.")
         self.feature_columns = list(features.columns)
-        scaled = self.scaler.fit_transform(features)
 
-        if len(y.unique()) < 2:
+        if len(features) >= 10 and len(y.unique()) >= 2:
+            X_train, X_test, y_train, y_test = train_test_split(
+                features, y, test_size=0.2, random_state=42, stratify=y
+            )
+        else:
+            X_train, X_test, y_train, y_test = features, None, y, None
+
+        self.train_size = len(X_train)
+        self.test_size = len(X_test) if X_test is not None else 0
+
+        if len(y_train.unique()) < 2:
             raise ValueError("DiseasePredictor needs at least 2 classes in target.")
 
-        self.model.fit(scaled, y)
-        preds = self.model.predict(scaled)
-        self.accuracy = round(accuracy_score(y, preds), 4)
+        scaled_train = self.scaler.fit_transform(X_train)
+        self.model.fit(scaled_train, y_train)
+
+        train_preds = self.model.predict(scaled_train)
+        self.accuracy_train = round(accuracy_score(y_train, train_preds), 4)
+
+        if X_test is not None:
+            scaled_test = self.scaler.transform(X_test)
+            test_preds = self.model.predict(scaled_test)
+            self.accuracy_test = round(accuracy_score(y_test, test_preds), 4)
+
         self.classes = self.model.classes_.tolist()
         self.is_fitted = True
 
@@ -212,7 +312,10 @@ class DiseasePredictor(BasePredictor):
             "algorithm": "Logistic Regression",
             "target": "is_diabetic",
             "features": self.feature_columns,
-            "accuracy": self.accuracy,
+            "accuracy_train": self.accuracy_train,
+            "accuracy_test": self.accuracy_test,
+            "train_size": self.train_size,
+            "test_size": self.test_size,
             "classes": self.classes,
         }
 
@@ -236,7 +339,10 @@ class DiagnosisTreePredictor(BasePredictor):
             max_depth=max_depth, random_state=42, class_weight="balanced"
         )
         self.max_depth = max_depth
-        self.accuracy = None
+        self.accuracy_train = None
+        self.accuracy_test = None
+        self.train_size = None
+        self.test_size = None
         self.feature_importances = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
@@ -261,9 +367,26 @@ class DiagnosisTreePredictor(BasePredictor):
         if features.empty:
             raise ValueError("DiagnosisTreePredictor: no usable feature columns found.")
         self.feature_columns = list(features.columns)
-        self.model.fit(features, y)
-        preds = self.model.predict(features)
-        self.accuracy = round(accuracy_score(y, preds), 4)
+
+        if len(features) >= 10 and len(y.unique()) >= 2:
+            X_train, X_test, y_train, y_test = train_test_split(
+                features, y, test_size=0.2, random_state=42, stratify=y
+            )
+        else:
+            X_train, X_test, y_train, y_test = features, None, y, None
+
+        self.train_size = len(X_train)
+        self.test_size = len(X_test) if X_test is not None else 0
+
+        self.model.fit(X_train, y_train)
+
+        train_preds = self.model.predict(X_train)
+        self.accuracy_train = round(accuracy_score(y_train, train_preds), 4)
+
+        if X_test is not None:
+            test_preds = self.model.predict(X_test)
+            self.accuracy_test = round(accuracy_score(y_test, test_preds), 4)
+
         self.feature_importances = {
             col: round(float(imp), 4)
             for col, imp in zip(self.feature_columns, self.model.feature_importances_)
@@ -295,7 +418,10 @@ class DiagnosisTreePredictor(BasePredictor):
             "target": "risk_label",
             "max_depth": self.max_depth,
             "features": self.feature_columns,
-            "accuracy": self.accuracy,
+            "accuracy_train": self.accuracy_train,
+            "accuracy_test": self.accuracy_test,
+            "train_size": self.train_size,
+            "test_size": self.test_size,
             "feature_importances": self.feature_importances,
         }
 
@@ -521,23 +647,83 @@ class RuleBasedPredictor(BasePredictor):
 
 class MLAnalysisService:
     """
-    Orchestrates all 4 ML models on a cleaned DataFrame.
-    Encapsulates model coordination and result aggregation.
+    Orchestrates all ML models on a cleaned DataFrame.
+    Loads persisted models from disk on init — shared across all users.
+    Falls back to fresh instances when no saved model exists yet.
+    Retrains on ALL patients in the DB, not just the current upload batch.
     """
 
     def __init__(self):
-        self.trend_predictor = TrendPredictor()
-        self.clusterer = PatientClusterer()
-        self.disease_predictor = DiseasePredictor()
-        self.diagnosis_tree = DiagnosisTreePredictor()
+        self.trend_predictor = BasePredictor.load("TrendPredictor") or TrendPredictor()
+        self.clusterer = BasePredictor.load("PatientClusterer") or PatientClusterer()
+        self.disease_predictor = (
+            BasePredictor.load("DiseasePredictor") or DiseasePredictor()
+        )
+        self.diagnosis_tree = (
+            BasePredictor.load("DiagnosisTreePredictor") or DiagnosisTreePredictor()
+        )
         self.rule_predictor = RuleBasedPredictor()
 
-    def _build_risk_target(self, df: pd.DataFrame) -> pd.Series:
+    def _build_full_df(self) -> pd.DataFrame:
         """
-        Derives a numeric risk label (0/1/2) from available columns.
-        Used as target for DiseasePredictor and DiagnosisTreePredictor.
+        Queries every Patient row in the DB and returns a clean DataFrame
+        ready for model training. This is what makes models learn from all
+        users' data, not just the current upload batch.
         """
+        # Import here to avoid circular imports at module load time
+        from patients.models import Patient
 
+        qs = Patient.objects.all().values(
+            "date_of_birth",
+            "blood_pressure_systolic",
+            "blood_pressure_diastolic",
+            "heart_rate",
+            "glucose_level",
+            "bmi",
+            "cholesterol",
+            "is_smoker",
+            "is_diabetic",
+            "has_hypertension",
+        )
+
+        if not qs.exists():
+            return pd.DataFrame()
+
+        df = pd.DataFrame.from_records(qs)
+
+        # Calculate age from date_of_birth — patient.age is not a DB field
+        today = date_type.today()
+        df["age"] = df["date_of_birth"].apply(
+            lambda d: (today - d).days // 365 if pd.notna(d) and d is not None else None
+        )
+        df = df.drop(columns=["date_of_birth"])
+
+        # Cast boolean fields to int so sklearn handles them correctly
+        for col in ["is_smoker", "is_diabetic", "has_hypertension"]:
+            if col in df.columns:
+                df[col] = df[col].astype(int)
+
+        # Drop rows where every numeric column is null (empty patient shells)
+        numeric_cols = [
+            "age",
+            "blood_pressure_systolic",
+            "blood_pressure_diastolic",
+            "heart_rate",
+            "glucose_level",
+            "bmi",
+            "cholesterol",
+        ]
+        existing_numeric = [c for c in numeric_cols if c in df.columns]
+        df = df.dropna(subset=existing_numeric, how="all")
+
+        # Fill remaining nulls with column medians so sklearn doesn't choke
+        for col in existing_numeric:
+            if df[col].isnull().any():
+                df[col] = df[col].fillna(df[col].median())
+
+        return df.reset_index(drop=True)
+
+    def _build_risk_target(self, df: pd.DataFrame) -> pd.Series:
         def score_row(row):
             score = 0
             if row.get("glucose_level", 0) > 125:
@@ -551,33 +737,50 @@ class MLAnalysisService:
             if row.get("has_hypertension", 0):
                 score += 1
             if score <= 1:
-                return 0  # LOW
+                return 0
             elif score <= 3:
-                return 1  # MEDIUM
+                return 1
             else:
-                return 2  # HIGH
+                return 2
 
         return df.apply(score_row, axis=1)
 
     def _build_diabetic_target(self, df: pd.DataFrame) -> pd.Series:
-        """
-        Derives binary diabetic label from glucose + is_diabetic if present.
-        """
         if "is_diabetic" in df.columns:
             return df["is_diabetic"].astype(int)
-        # fallback: glucose > 125 as proxy
         return (df.get("glucose_level", pd.Series([0] * len(df))) > 125).astype(int)
 
     def run(self, df: pd.DataFrame) -> Dict[str, Any]:
+        """
+        df here is the upload batch — used only for returning predictions
+        row-by-row to the frontend. Actual model training uses the full DB.
+        """
         results = {}
         errors = {}
 
-        # 1. TrendPredictor
+        # Build the full-DB DataFrame for training.
+        # Falls back to the upload batch if the DB is somehow empty.
+        train_df = self._build_full_df()
+        if train_df.empty:
+            train_df = df
+            print(
+                "[MLAnalysisService] Warning: DB empty, training on upload batch only."
+            )
+        else:
+            print(f"[MLAnalysisService] Training on {len(train_df)} patients from DB.")
+
+        # 1. TrendPredictor — train on full DB, predict on upload batch
         try:
-            if "age" in df.columns and "blood_pressure_systolic" in df.columns:
-                self.trend_predictor.fit(df, df["blood_pressure_systolic"])
+            if (
+                "age" in train_df.columns
+                and "blood_pressure_systolic" in train_df.columns
+            ):
+                self.trend_predictor.fit(train_df, train_df["blood_pressure_systolic"])
+                self.trend_predictor.save()
+                # Predict on the upload batch rows (need age column)
+                predict_df = df if "age" in df.columns else train_df
                 results["trend_prediction"] = {
-                    "predictions": self.trend_predictor.predict(df),
+                    "predictions": self.trend_predictor.predict(predict_df),
                     "model_info": self.trend_predictor.get_model_info(),
                 }
         except Exception as e:
@@ -585,7 +788,8 @@ class MLAnalysisService:
 
         # 2. PatientClusterer
         try:
-            self.clusterer.fit(df)
+            self.clusterer.fit(train_df)
+            self.clusterer.save()
             results["clustering"] = {
                 "predictions": self.clusterer.predict(df),
                 "model_info": self.clusterer.get_model_info(),
@@ -595,9 +799,10 @@ class MLAnalysisService:
 
         # 3. DiseasePredictor
         try:
-            diabetic_target = self._build_diabetic_target(df)
+            diabetic_target = self._build_diabetic_target(train_df)
             if len(diabetic_target.unique()) >= 2:
-                self.disease_predictor.fit(df, diabetic_target)
+                self.disease_predictor.fit(train_df, diabetic_target)
+                self.disease_predictor.save()
                 results["disease_prediction"] = {
                     "predictions": self.disease_predictor.predict(df),
                     "model_info": self.disease_predictor.get_model_info(),
@@ -611,9 +816,10 @@ class MLAnalysisService:
 
         # 4. DiagnosisTreePredictor
         try:
-            risk_target = self._build_risk_target(df)
+            risk_target = self._build_risk_target(train_df)
             if len(risk_target.unique()) >= 2:
-                self.diagnosis_tree.fit(df, risk_target)
+                self.diagnosis_tree.fit(train_df, risk_target)
+                self.diagnosis_tree.save()
                 results["diagnosis_tree"] = {
                     "predictions": self.diagnosis_tree.predict(df),
                     "model_info": self.diagnosis_tree.get_model_info(),
@@ -623,7 +829,7 @@ class MLAnalysisService:
         except Exception as e:
             errors["diagnosis_tree"] = str(e)
 
-        # 5. RuleBasedPredictor
+        # 5. RuleBasedPredictor — no training, no save
         try:
             self.rule_predictor.fit(df)
             results["rule_based"] = {

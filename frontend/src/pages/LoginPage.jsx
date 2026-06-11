@@ -3,32 +3,58 @@ import { Link } from 'react-router-dom'
 import { Activity, Eye, EyeOff } from 'lucide-react'
 import { login } from '../api/index'
 
+const RULES = {
+  username: (v) => {
+    if (!v.trim()) return 'Username is required.'
+    if (v.length > 150) return 'Username is too long.'
+    return ''
+  },
+  password: (v) => {
+    if (!v) return 'Password is required.'
+    return ''
+  },
+}
+
 export default function LoginPage({ onSuccess }) {
   const [form, setForm] = useState({ username: '', password: '' })
+  const [touched, setTouched] = useState({ username: false, password: false })
   const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
+  const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const getError = (key) => (!touched[key] ? '' : RULES[key](form[key]))
+
+  const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
+
+  const handleChange = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }))
+    if (serverError) setServerError('')
+  }
+
+  const isFormValid = () => Object.keys(RULES).every((key) => RULES[key](form[key]) === '')
+
   const handleSubmit = async () => {
-    if (!form.username || !form.password) {
-      setError('Please enter username and password.')
-      return
-    }
+    setTouched({ username: true, password: true })
+    if (!isFormValid()) return
+
     setLoading(true)
-    setError('')
+    setServerError('')
     try {
-      const res = await login(form.username, form.password)
+      const res = await login(form.username.trim(), form.password)
       localStorage.setItem('access_token', res.data.access)
       localStorage.setItem('refresh_token', res.data.refresh)
       onSuccess()
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid credentials.')
+      setServerError(err.response?.data?.detail || 'Invalid username or password.')
     } finally {
       setLoading(false)
     }
   }
 
   const handleKey = (e) => { if (e.key === 'Enter') handleSubmit() }
+
+  const usernameError = getError('username')
+  const passwordError = getError('password')
 
   return (
     <div style={{
@@ -59,13 +85,13 @@ export default function LoginPage({ onSuccess }) {
           <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Enter your credentials to continue</p>
         </div>
 
-        {error && (
+        {serverError && (
           <div style={{
             background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
             borderRadius: 8, padding: '10px 14px', marginBottom: 16,
             fontSize: 13, color: '#f87171',
           }}>
-            {error}
+            {serverError}
           </div>
         )}
 
@@ -77,15 +103,20 @@ export default function LoginPage({ onSuccess }) {
           <input
             type="text"
             value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            onChange={(e) => handleChange('username', e.target.value)}
+            onBlur={() => handleBlur('username')}
             onKeyDown={handleKey}
             placeholder="Enter username"
             style={{
               width: '100%', padding: '10px 14px', borderRadius: 8,
-              background: '#0f1117', border: '1px solid #2a3347',
+              background: '#0f1117',
+              border: `1px solid ${usernameError ? '#ef4444' : '#2a3347'}`,
               color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
             }}
           />
+          {usernameError && (
+            <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{usernameError}</div>
+          )}
         </div>
 
         {/* Password */}
@@ -97,12 +128,14 @@ export default function LoginPage({ onSuccess }) {
             <input
               type={showPassword ? 'text' : 'password'}
               value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              onChange={(e) => handleChange('password', e.target.value)}
+              onBlur={() => handleBlur('password')}
               onKeyDown={handleKey}
               placeholder="Enter password"
               style={{
                 width: '100%', padding: '10px 40px 10px 14px', borderRadius: 8,
-                background: '#0f1117', border: '1px solid #2a3347',
+                background: '#0f1117',
+                border: `1px solid ${passwordError ? '#ef4444' : '#2a3347'}`,
                 color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
               }}
             />
@@ -116,6 +149,9 @@ export default function LoginPage({ onSuccess }) {
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
+          {passwordError && (
+            <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{passwordError}</div>
+          )}
         </div>
 
         {/* Submit */}
@@ -147,7 +183,7 @@ export default function LoginPage({ onSuccess }) {
             onMouseEnter={e => e.currentTarget.style.color = '#64748b'}
             onMouseLeave={e => e.currentTarget.style.color = '#334155'}
           >
-             Staff access
+            Staff access
           </Link>
         </div>
       </div>
