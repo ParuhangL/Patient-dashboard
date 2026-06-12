@@ -7,14 +7,16 @@ import {
   Activity,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  KeyRound,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'patients',  label: 'Patients',  icon: Users },
-  { id: 'analysis',  label: 'ML Analysis', icon: FlaskConical },
-  { id: 'upload',    label: 'Upload Data', icon: Upload },
+  { id: 'dashboard',        label: 'Dashboard',       icon: LayoutDashboard },
+  { id: 'patients',         label: 'Patients',        icon: Users },
+  { id: 'analysis',         label: 'ML Analysis',     icon: FlaskConical },
+  { id: 'upload',           label: 'Upload Data',     icon: Upload },
+  { id: 'change-password',  label: 'Change Password', icon: KeyRound },
 ]
 
 export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
@@ -125,7 +127,6 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
       {/* FOOTER */}
       <div style={{ borderTop: '1px solid #2a3347', padding: '12px 8px' }}>
 
-        {/* User info — expanded */}
         {!collapsed && user && (
           <div style={{
             display: 'flex',
@@ -163,19 +164,10 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
               }}>
                 {user.username}
               </div>
-              <div style={{
-                fontSize: 10,
-                color: '#64748b',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-              </div>
             </div>
           </div>
         )}
 
-        {/* User avatar — collapsed */}
         {collapsed && user && (
           <div
             title={user.username}
@@ -197,7 +189,6 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
           </div>
         )}
 
-        {/* Sign out */}
         <button
           title={collapsed ? 'Sign out' : ''}
           onClick={onLogout}

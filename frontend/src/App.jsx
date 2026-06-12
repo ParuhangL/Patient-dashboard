@@ -10,6 +10,7 @@ import AnalysisPage from './pages/AnalysisPage'
 import UploadPage from './pages/UploadPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminLogin from './admin/AdminLogin'
 import AdminPage from './admin/AdminPage'
 
@@ -38,7 +39,6 @@ const TOAST_BORDER = {
 function ToastItem({ toast, onRemove }) {
   const [visible, setVisible] = useState(false)
 
-  // fade in
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 10)
     return () => clearTimeout(t)
@@ -130,7 +130,6 @@ function ToastProvider({ children }) {
     delete timers.current[id]
   }, [])
 
-  // toast(type, title, message?, duration?)
   const toast = useCallback((type, title, message = '', duration = 4000) => {
     const id = Date.now() + Math.random()
     setToasts(prev => [...prev, { id, type, title, message }])
@@ -143,11 +142,10 @@ function ToastProvider({ children }) {
     return id
   }, [])
 
-  // Convenience shorthands
-  toast.success = (title, message, duration)  => toast('success', title, message, duration)
-  toast.error   = (title, message, duration)  => toast('error',   title, message, duration)
-  toast.warning = (title, message, duration)  => toast('warning', title, message, duration)
-  toast.info    = (title, message, duration)  => toast('info',    title, message, duration)
+  toast.success = (title, message, duration) => toast('success', title, message, duration)
+  toast.error   = (title, message, duration) => toast('error',   title, message, duration)
+  toast.warning = (title, message, duration) => toast('warning', title, message, duration)
+  toast.info    = (title, message, duration) => toast('info',    title, message, duration)
 
   return (
     <ToastContext.Provider value={toast}>
@@ -160,24 +158,27 @@ function ToastProvider({ children }) {
 // ─── Routing ──────────────────────────────────────────────────────────────────
 
 const PAGE_MAP = {
-  '/dashboard': 'dashboard',
-  '/patients':  'patients',
-  '/analysis':  'analysis',
-  '/upload':    'upload',
+  '/dashboard':        'dashboard',
+  '/patients':         'patients',
+  '/analysis':         'analysis',
+  '/upload':           'upload',
+  '/change-password':  'change-password',
 }
 
 const ROUTE_MAP = {
-  dashboard: '/dashboard',
-  patients:  '/patients',
-  analysis:  '/analysis',
-  upload:    '/upload',
+  dashboard:         '/dashboard',
+  patients:          '/patients',
+  analysis:          '/analysis',
+  upload:            '/upload',
+  'change-password': '/change-password',
 }
 
 const PAGES = {
-  dashboard: DashboardPage,
-  patients:  PatientsPage,
-  analysis:  AnalysisPage,
-  upload:    UploadPage,
+  dashboard:         DashboardPage,
+  patients:          PatientsPage,
+  analysis:          AnalysisPage,
+  upload:            UploadPage,
+  'change-password': ChangePasswordPage,
 }
 
 function AppInner() {

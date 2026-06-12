@@ -6,17 +6,13 @@ from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, r2_score
+from sklearn.metrics import accuracy_score, r2_score, confusion_matrix
 import warnings
 from datetime import date as date_type
 
 warnings.filterwarnings("ignore")
 
 from patients.services.base import BasePredictor
-
-# ──────────────────────────────────────────────
-# 1. TrendPredictor — Linear Regression
-# ──────────────────────────────────────────────
 
 
 class TrendPredictor(BasePredictor):
@@ -44,12 +40,10 @@ class TrendPredictor(BasePredictor):
             )
         self.feature_columns = list(features.columns)
 
-        # 80/20 split — need at least 10 rows to bother splitting
         if len(features) >= 10:
             X_train, X_test, y_train, y_test = train_test_split(
                 features, y, test_size=0.2, random_state=42
             )
-            # Diastolic target aligned to same split
             dbp_col = (
                 X["blood_pressure_diastolic"]
                 if "blood_pressure_diastolic" in X.columns
@@ -60,7 +54,6 @@ class TrendPredictor(BasePredictor):
                     features, dbp_col, test_size=0.2, random_state=42
                 )
         else:
-            # Too few rows — train on all, no test score
             X_train, X_test, y_train, y_test = features, None, y, None
             dbp_col = (
                 X["blood_pressure_diastolic"]
@@ -73,17 +66,14 @@ class TrendPredictor(BasePredictor):
         self.train_size = len(X_train)
         self.test_size = len(X_test) if X_test is not None else 0
 
-        # Systolic — fit on train
         self.model.fit(X_train, y_train)
         train_preds = self.model.predict(X_train)
         self.r2_score = round(r2_score(y_train, train_preds), 4)
 
-        # Systolic — evaluate on test
         if X_test is not None:
             test_preds = self.model.predict(X_test)
             self.r2_score_test = round(r2_score(y_test, test_preds), 4)
 
-        # Diastolic — fit on train
         if dbp_col is not None:
             self.model_dbp.fit(X_train, dbp_train)
             train_preds_dbp = self.model_dbp.predict(X_train)
@@ -131,11 +121,6 @@ class TrendPredictor(BasePredictor):
         }
 
 
-# ──────────────────────────────────────────────
-# 2. PatientClusterer — KMeans Clustering
-# ──────────────────────────────────────────────
-
-
 class PatientClusterer(BasePredictor):
     """
     Groups patients into health profiles using KMeans.
@@ -156,8 +141,6 @@ class PatientClusterer(BasePredictor):
         self.inertia = None
         self.train_size = None
         self.test_size = None
-        # KMeans has no accuracy — we report inertia on train vs test
-        # as a sanity check (lower inertia on test = clusters generalise well)
         self.inertia_test = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
@@ -178,15 +161,12 @@ class PatientClusterer(BasePredictor):
         self.train_size = len(X_train)
         self.test_size = len(X_test) if X_test is not None else 0
 
-        # Fit scaler and model on train only
         scaled_train = self.scaler.fit_transform(X_train)
         self.model.fit(scaled_train)
         self.inertia = round(self.model.inertia_, 4)
 
-        # Evaluate on test — transform with train scaler, score with trained centroids
         if X_test is not None:
             scaled_test = self.scaler.transform(X_test)
-            # inertia_ isn't available post-predict, so compute manually
             labels_test = self.model.predict(scaled_test)
             centers = self.model.cluster_centers_
             inertia_test = sum(
@@ -225,11 +205,6 @@ class PatientClusterer(BasePredictor):
         }
 
 
-# ──────────────────────────────────────────────
-# 3. DiseasePredictor — Logistic Regression
-# ──────────────────────────────────────────────
-
-
 class DiseasePredictor(BasePredictor):
     """
     Predicts diabetes probability using Logistic Regression.
@@ -245,6 +220,7 @@ class DiseasePredictor(BasePredictor):
         self.train_size = None
         self.test_size = None
         self.classes = None
+        self.confusion_matrix = None  # computed on test set
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         if y is None:
@@ -288,6 +264,17 @@ class DiseasePredictor(BasePredictor):
             test_preds = self.model.predict(scaled_test)
             self.accuracy_test = round(accuracy_score(y_test, test_preds), 4)
 
+            # Confusion matrix on test set — rows=actual, cols=predicted
+            # Classes are [0=Non-Diabetic, 1=Diabetic]
+            cm = confusion_matrix(y_test, test_preds, labels=[0, 1])
+            self.confusion_matrix = {
+                "TN": int(cm[0][0]),
+                "FP": int(cm[0][1]),
+                "FN": int(cm[1][0]),
+                "TP": int(cm[1][1]),
+                "labels": ["Non-Diabetic", "Diabetic"],
+            }
+
         self.classes = self.model.classes_.tolist()
         self.is_fitted = True
 
@@ -317,12 +304,8 @@ class DiseasePredictor(BasePredictor):
             "train_size": self.train_size,
             "test_size": self.test_size,
             "classes": self.classes,
+            "confusion_matrix": self.confusion_matrix,
         }
-
-
-# ──────────────────────────────────────────────
-# 4. DiagnosisTreePredictor — Decision Tree
-# ──────────────────────────────────────────────
 
 
 class DiagnosisTreePredictor(BasePredictor):
@@ -344,6 +327,7 @@ class DiagnosisTreePredictor(BasePredictor):
         self.train_size = None
         self.test_size = None
         self.feature_importances = None
+        self.confusion_matrix = None  # computed on test set
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         if y is None:
@@ -387,6 +371,14 @@ class DiagnosisTreePredictor(BasePredictor):
             test_preds = self.model.predict(X_test)
             self.accuracy_test = round(accuracy_score(y_test, test_preds), 4)
 
+            # Confusion matrix on test set — rows=actual, cols=predicted
+            # Classes: 0=LOW, 1=MEDIUM, 2=HIGH
+            cm = confusion_matrix(y_test, test_preds, labels=[0, 1, 2])
+            self.confusion_matrix = {
+                "matrix": [[int(cell) for cell in row] for row in cm],
+                "labels": ["LOW", "MEDIUM", "HIGH"],
+            }
+
         self.feature_importances = {
             col: round(float(imp), 4)
             for col, imp in zip(self.feature_columns, self.model.feature_importances_)
@@ -423,12 +415,8 @@ class DiagnosisTreePredictor(BasePredictor):
             "train_size": self.train_size,
             "test_size": self.test_size,
             "feature_importances": self.feature_importances,
+            "confusion_matrix": self.confusion_matrix,
         }
-
-
-# ──────────────────────────────────────────────
-# 5. RuleBasedPredictor — Rule Engine
-# ──────────────────────────────────────────────
 
 
 class RuleBasedPredictor(BasePredictor):
@@ -561,38 +549,16 @@ class RuleBasedPredictor(BasePredictor):
 
     def __init__(self):
         super().__init__(model_name="RuleBasedPredictor")
-        self.is_fitted = True  # No training needed — rule engine is always ready
+        self.is_fitted = True
 
     def fit(self, X: pd.DataFrame, y=None) -> None:
-        """No fitting required for rule-based engine."""
         self.feature_columns = [
             r["column"] for r in self.RULES if r["column"] in X.columns
         ]
         self.is_fitted = True
 
     def _evaluate_row(self, row: dict) -> Dict[str, Any]:
-        score = 0
-        triggered_reasons = []
-
-        for rule in self.RULES:
-            col = rule["column"]
-            val = row.get(col, None)
-            if val is None:
-                continue
-            try:
-                val = float(val)
-            except (ValueError, TypeError):
-                continue
-
-            if rule["operator"] == ">" and val > rule["threshold"]:
-                # Avoid double-counting layered rules (e.g. glucose >126 also >100)
-                # Only add the highest applicable contribution per column group
-                score += rule["risk_contribution"]
-                triggered_reasons.append(rule["reason"])
-
-        # Deduplicate by keeping only the highest-contribution reason per column
         seen_columns = {}
-        deduped_reasons = []
         for rule in self.RULES:
             col = rule["column"]
             val = row.get(col, None)
@@ -605,12 +571,11 @@ class RuleBasedPredictor(BasePredictor):
             if rule["operator"] == ">" and val > rule["threshold"]:
                 if col not in seen_columns:
                     seen_columns[col] = rule
-                    deduped_reasons.append(rule["reason"])
 
-        # Recompute score using deduplicated rules
         deduped_score = sum(
             seen_columns[col]["risk_contribution"] for col in seen_columns
         )
+        deduped_reasons = [seen_columns[col]["reason"] for col in seen_columns]
 
         risk_label = "LOW"
         for label, (low, high) in self.RISK_THRESHOLDS.items():
@@ -640,11 +605,6 @@ class RuleBasedPredictor(BasePredictor):
         }
 
 
-# ──────────────────────────────────────────────
-# 6. MLAnalysisService — Orchestrator
-# ──────────────────────────────────────────────
-
-
 class MLAnalysisService:
     """
     Orchestrates all ML models on a cleaned DataFrame.
@@ -665,12 +625,6 @@ class MLAnalysisService:
         self.rule_predictor = RuleBasedPredictor()
 
     def _build_full_df(self) -> pd.DataFrame:
-        """
-        Queries every Patient row in the DB and returns a clean DataFrame
-        ready for model training. This is what makes models learn from all
-        users' data, not just the current upload batch.
-        """
-        # Import here to avoid circular imports at module load time
         from patients.models import Patient
 
         qs = Patient.objects.all().values(
@@ -691,19 +645,16 @@ class MLAnalysisService:
 
         df = pd.DataFrame.from_records(qs)
 
-        # Calculate age from date_of_birth — patient.age is not a DB field
         today = date_type.today()
         df["age"] = df["date_of_birth"].apply(
             lambda d: (today - d).days // 365 if pd.notna(d) and d is not None else None
         )
         df = df.drop(columns=["date_of_birth"])
 
-        # Cast boolean fields to int so sklearn handles them correctly
         for col in ["is_smoker", "is_diabetic", "has_hypertension"]:
             if col in df.columns:
                 df[col] = df[col].astype(int)
 
-        # Drop rows where every numeric column is null (empty patient shells)
         numeric_cols = [
             "age",
             "blood_pressure_systolic",
@@ -716,7 +667,6 @@ class MLAnalysisService:
         existing_numeric = [c for c in numeric_cols if c in df.columns]
         df = df.dropna(subset=existing_numeric, how="all")
 
-        # Fill remaining nulls with column medians so sklearn doesn't choke
         for col in existing_numeric:
             if df[col].isnull().any():
                 df[col] = df[col].fillna(df[col].median())
@@ -751,15 +701,9 @@ class MLAnalysisService:
         return (df.get("glucose_level", pd.Series([0] * len(df))) > 125).astype(int)
 
     def run(self, df: pd.DataFrame) -> Dict[str, Any]:
-        """
-        df here is the upload batch — used only for returning predictions
-        row-by-row to the frontend. Actual model training uses the full DB.
-        """
         results = {}
         errors = {}
 
-        # Build the full-DB DataFrame for training.
-        # Falls back to the upload batch if the DB is somehow empty.
         train_df = self._build_full_df()
         if train_df.empty:
             train_df = df
@@ -769,7 +713,7 @@ class MLAnalysisService:
         else:
             print(f"[MLAnalysisService] Training on {len(train_df)} patients from DB.")
 
-        # 1. TrendPredictor — train on full DB, predict on upload batch
+        # 1. TrendPredictor
         try:
             if (
                 "age" in train_df.columns
@@ -777,7 +721,6 @@ class MLAnalysisService:
             ):
                 self.trend_predictor.fit(train_df, train_df["blood_pressure_systolic"])
                 self.trend_predictor.save()
-                # Predict on the upload batch rows (need age column)
                 predict_df = df if "age" in df.columns else train_df
                 results["trend_prediction"] = {
                     "predictions": self.trend_predictor.predict(predict_df),
@@ -829,7 +772,7 @@ class MLAnalysisService:
         except Exception as e:
             errors["diagnosis_tree"] = str(e)
 
-        # 5. RuleBasedPredictor — no training, no save
+        # 5. RuleBasedPredictor
         try:
             self.rule_predictor.fit(df)
             results["rule_based"] = {
