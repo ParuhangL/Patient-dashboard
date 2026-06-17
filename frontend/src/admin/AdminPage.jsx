@@ -55,6 +55,7 @@ const MODEL_LABELS = {
   kmeans:            'KMeans',
   logistic:          'Logistic Regression',
   decision_tree:     'Decision Tree',
+  isolation_forest:  'Isolation Forest',
 }
 
 const MODEL_COLORS = {
@@ -63,6 +64,7 @@ const MODEL_COLORS = {
   kmeans:            '#8b5cf6',
   logistic:          '#10b981',
   decision_tree:     '#f59e0b',
+  isolation_forest:  '#ef4444', 
 }
 
 function ConfidenceBar({ value }) {
@@ -201,7 +203,10 @@ export default function AdminPage() {
 
   const renderML = () => (
     <div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 20 }}>ML Model Health</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 }}>ML Model Health</div>
+      <div style={{ fontSize: 12, color: '#475569', marginBottom: 20 }}>
+        Accuracy metrics sourced from the most recent completed batch upload.
+      </div>
       <div style={{ background: '#161b27', border: '1px solid #2a3347', borderRadius: 10, overflow: 'hidden' }}>
         {loadingML ? (
           <div style={{ padding: 32, textAlign: 'center', color: '#64748b' }}>Loading ML health…</div>
@@ -209,33 +214,112 @@ export default function AdminPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #2a3347' }}>
-                {['Model', 'Total Runs', 'Avg Confidence', 'Last Run', 'High', 'Medium', 'Low'].map(h => (
+                {['Model', 'Total Runs', 'Avg Confidence', 'Train Acc', 'Test Acc', 'Last Run', 'High', 'Medium', 'Low'].map(h => (
                   <th key={h} style={{ padding: '11px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {mlHealth.map((m, i) => (
-                <tr key={m.model_type} style={{ borderBottom: '1px solid #1e2535', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 4, background: `${MODEL_COLORS[m.model_type]}18`, color: MODEL_COLORS[m.model_type], border: `1px solid ${MODEL_COLORS[m.model_type]}40` }}>
-                      {MODEL_LABELS[m.model_type] || m.model_type}
-                    </span>
-                  </td>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: m.total_runs === 0 ? '#475569' : '#e2e8f0' }}>{m.total_runs}</span>
-                    {m.total_runs === 0 && <span style={{ fontSize: 10, color: '#ef4444', marginLeft: 6, fontWeight: 600 }}>UNUSED</span>}
-                  </td>
-                  <td style={{ padding: '11px 14px', minWidth: 140 }}><ConfidenceBar value={m.avg_confidence} /></td>
-                  <td style={{ padding: '11px 14px', fontSize: 12, color: '#64748b' }}>{fmtDateTime(m.last_run)}</td>
-                  <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 600, color: m.risk_counts.HIGH > 0 ? '#ef4444' : '#475569' }}>{m.risk_counts.HIGH || '—'}</td>
-                  <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 600, color: m.risk_counts.MEDIUM > 0 ? '#f59e0b' : '#475569' }}>{m.risk_counts.MEDIUM || '—'}</td>
-                  <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 600, color: m.risk_counts.LOW > 0 ? '#10b981' : '#475569' }}>{m.risk_counts.LOW || '—'}</td>
-                </tr>
-              ))}
+              {mlHealth.map((m, i) => {
+                const hasAccuracy = m.accuracy_train != null || m.accuracy_test != null
+                const gap = m.accuracy_train != null && m.accuracy_test != null
+                  ? m.accuracy_train - m.accuracy_test
+                  : null
+                const testColor = gap == null
+                  ? '#64748b'
+                  : gap <= 0.10 ? '#10b981' : '#f59e0b'
+
+                return (
+                  <tr key={m.model_type} style={{ borderBottom: '1px solid #1e2535', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
+
+                    {/* Model badge */}
+                    <td style={{ padding: '11px 14px' }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 4, background: `${MODEL_COLORS[m.model_type]}18`, color: MODEL_COLORS[m.model_type], border: `1px solid ${MODEL_COLORS[m.model_type]}40` }}>
+                        {MODEL_LABELS[m.model_type] || m.model_type}
+                      </span>
+                    </td>
+
+                    {/* Total runs */}
+                    <td style={{ padding: '11px 14px' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: m.total_runs === 0 ? '#475569' : '#e2e8f0' }}>{m.total_runs}</span>
+                      {m.total_runs === 0 && <span style={{ fontSize: 10, color: '#ef4444', marginLeft: 6, fontWeight: 600 }}>UNUSED</span>}
+                    </td>
+
+                    {/* Avg confidence */}
+                    <td style={{ padding: '11px 14px', minWidth: 140 }}><ConfidenceBar value={m.avg_confidence} /></td>
+
+                    {/* Train accuracy */}
+                    <td style={{ padding: '11px 14px', minWidth: 90 }}>
+                      {!hasAccuracy ? (
+                        <span style={{ fontSize: 11, color: '#334155', fontStyle: 'italic' }}>no data</span>
+                      ) : m.accuracy_train == null ? (
+                        <span style={{ fontSize: 12, color: '#475569' }}>—</span>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
+                            {(m.accuracy_train * 100).toFixed(1)}%
+                          </span>
+                          <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                            {m.metric_label} train
+                          </span>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Test accuracy */}
+                    <td style={{ padding: '11px 14px', minWidth: 90 }}>
+                      {!hasAccuracy ? (
+                        <span style={{ fontSize: 11, color: '#334155', fontStyle: 'italic' }}>no data</span>
+                      ) : m.accuracy_test == null ? (
+                        <span style={{ fontSize: 12, color: '#475569' }}>—</span>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: testColor }}>
+                            {(m.accuracy_test * 100).toFixed(1)}%
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                              {m.metric_label} test
+                            </span>
+                            {gap != null && (
+                              <span style={{ fontSize: 10, fontWeight: 600, color: testColor }}>
+                                {gap <= 0.10 ? '✓' : '△'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+
+                    {/* Last run */}
+                    <td style={{ padding: '11px 14px', fontSize: 12, color: '#64748b' }}>{fmtDateTime(m.last_run)}</td>
+
+                    {/* Risk counts */}
+                    <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 600, color: m.risk_counts.HIGH > 0 ? '#ef4444' : '#475569' }}>{m.risk_counts.HIGH || '—'}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 600, color: m.risk_counts.MEDIUM > 0 ? '#f59e0b' : '#475569' }}>{m.risk_counts.MEDIUM || '—'}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 12, fontWeight: 600, color: m.risk_counts.LOW > 0 ? '#10b981' : '#475569' }}>{m.risk_counts.LOW || '—'}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
+      </div>
+
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 20, marginTop: 14, paddingLeft: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#10b981' }}>✓</span>
+          <span style={{ fontSize: 11, color: '#475569' }}>Test within 10% of train (good fit)</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#f59e0b' }}>△</span>
+          <span style={{ fontSize: 11, color: '#475569' }}>Gap &gt;10% (possible overfit)</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, color: '#334155', fontStyle: 'italic' }}>no data</span>
+          <span style={{ fontSize: 11, color: '#475569' }}>— upload a CSV to populate</span>
+        </div>
       </div>
     </div>
   )

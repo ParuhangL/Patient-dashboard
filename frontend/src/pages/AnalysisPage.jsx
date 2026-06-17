@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getAnalyses, getReports } from '../api'
-import { Search, Download } from 'lucide-react'
+import { Search, Download, AlertTriangle } from 'lucide-react'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -9,6 +9,12 @@ import {
 import { createPortal } from 'react-dom'
 
 function RiskBadge({ risk }) {
+  if (risk === 'ANOMALY') return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>ANOMALY</span>
+  )
+  if (risk === 'NORMAL') return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}>NORMAL</span>
+  )
   const cls = risk === 'HIGH' ? 'badge-high' : risk === 'MEDIUM' ? 'badge-medium' : 'badge-low'
   return <span className={cls}>{risk}</span>
 }
@@ -19,6 +25,7 @@ const MODEL_LABELS = {
   linear_regression: ' Linear Regression',
   kmeans:            ' KMeans',
   rule_based:        ' Rule Based',
+  isolation_forest:  ' Isolation Forest',
 }
 
 const MODEL_COLORS = {
@@ -27,6 +34,7 @@ const MODEL_COLORS = {
   linear_regression: '#3b82f6',
   kmeans:            '#f59e0b',
   rule_based:        '#10b981',
+  isolation_forest:  '#ef4444',
 }
 
 function ResultDetail({ result, modelType }) {
@@ -90,6 +98,24 @@ function ResultDetail({ result, modelType }) {
     )
   }
 
+  if (modelType === 'isolation_forest') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 4,
+          background: result.is_anomaly ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.12)',
+          color: result.is_anomaly ? '#f87171' : '#10b981',
+          border: `1px solid ${result.is_anomaly ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+        }}>
+          {result.status}
+        </span>
+        <span style={{ fontSize: 12, color: '#64748b' }}>
+          Score: {result.anomaly_score != null ? `${(result.anomaly_score * 100).toFixed(0)}%` : '—'}
+        </span>
+      </div>
+    )
+  }
+
   return <span style={{ fontSize: 12, color: '#64748b' }}>{JSON.stringify(result).slice(0, 60)}...</span>
 }
 
@@ -97,7 +123,7 @@ const RISK_COLORS = { LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444' }
 
 function RiskPieChart({ analyses, height = 200 }) {
   const counts = { LOW: 0, MEDIUM: 0, HIGH: 0 }
-  analyses.forEach(a => { if (a.risk_label) counts[a.risk_label]++ })
+  analyses.forEach(a => { if (['LOW', 'MEDIUM', 'HIGH'].includes(a.risk_label)) counts[a.risk_label]++ })
   const data = Object.entries(counts).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }))
 
   if (data.length === 0) return (
@@ -126,7 +152,7 @@ function ConfidenceBarChart({ analyses, modelCounts, height = 200 }) {
     }
   })
   const data = Object.keys(modelTotals).map(m => ({
-    name: MODEL_LABELS[m]?.split(' ')[1] || m,
+    name: MODEL_LABELS[m]?.trim().split(' ').slice(-1)[0] || m,
     avg_confidence: Math.round((modelConfSum[m] / modelTotals[m]) * 100),
     color: MODEL_COLORS[m] || '#3b82f6',
   }))
@@ -219,24 +245,22 @@ function RiskScatterChart({ analyses, height = 200 }) {
 // ── Confusion Matrix components ───────────────────────────────────────────────
 
 function BinaryConfusionMatrix({ cm, label, color }) {
-  // cm = { TP, FP, TN, FN, labels }
   if (!cm) return null
   const { TP, FP, TN, FN } = cm
-  const total = TP + FP + TN + FN
+  const total     = TP + FP + TN + FN
   const accuracy  = total > 0 ? ((TP + TN) / total * 100).toFixed(1) : '—'
   const precision = (TP + FP) > 0 ? (TP / (TP + FP) * 100).toFixed(1) : '—'
   const recall    = (TP + FN) > 0 ? (TP / (TP + FN) * 100).toFixed(1) : '—'
 
   const cells = [
-    { label: 'TN', value: TN, desc: 'True Negative',  bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.4)',  textColor: '#10b981' },
-    { label: 'FP', value: FP, desc: 'False Positive', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)',   textColor: '#f87171' },
-    { label: 'FN', value: FN, desc: 'False Negative', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.3)',   textColor: '#f87171' },
-    { label: 'TP', value: TP, desc: 'True Positive',  bg: 'rgba(16,185,129,0.15)',  border: 'rgba(16,185,129,0.4)',  textColor: '#10b981' },
+    { label: 'TN', value: TN, desc: 'True Negative',  bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', textColor: '#10b981' },
+    { label: 'FP', value: FP, desc: 'False Positive', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',  textColor: '#f87171' },
+    { label: 'FN', value: FN, desc: 'False Negative', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',  textColor: '#f87171' },
+    { label: 'TP', value: TP, desc: 'True Positive',  bg: 'rgba(16,185,129,0.15)', border: 'rgba(16,185,129,0.4)', textColor: '#10b981' },
   ]
 
   return (
     <div className="card" style={{ padding: 24 }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: color }} />
         <div>
@@ -244,44 +268,23 @@ function BinaryConfusionMatrix({ cm, label, color }) {
           <div style={{ fontSize: 11, color: '#64748b' }}>Binary · Test set · {total} samples</div>
         </div>
       </div>
-
-      {/* Axis labels */}
       <div style={{ display: 'flex', marginBottom: 4 }}>
         <div style={{ width: 90 }} />
-        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Predicted: Non-Diabetic
-        </div>
-        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-          Predicted: Diabetic
-        </div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predicted: Non-Diabetic</div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predicted: Diabetic</div>
       </div>
-
-      {/* Matrix grid */}
       <div style={{ display: 'flex', gap: 0 }}>
-        {/* Row labels */}
         <div style={{ width: 90, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10 }}>
-            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', writingMode: 'initial' }}>
-              Actual: Non-Diabetic
-            </span>
+            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actual: Non-Diabetic</span>
           </div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10 }}>
-            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Actual: Diabetic
-            </span>
+            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actual: Diabetic</span>
           </div>
         </div>
-
-        {/* 2×2 grid */}
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {cells.map(c => (
-            <div key={c.label} style={{
-              background: c.bg,
-              border: `1px solid ${c.border}`,
-              borderRadius: 8,
-              padding: '16px 12px',
-              textAlign: 'center',
-            }}>
+            <div key={c.label} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, padding: '16px 12px', textAlign: 'center' }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: c.textColor, lineHeight: 1 }}>{c.value}</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: c.textColor, marginTop: 4 }}>{c.label}</div>
               <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{c.desc}</div>
@@ -289,18 +292,13 @@ function BinaryConfusionMatrix({ cm, label, color }) {
           ))}
         </div>
       </div>
-
-      {/* Metrics strip */}
       <div style={{ display: 'flex', gap: 0, marginTop: 16, background: '#0f1117', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2535' }}>
         {[
           { label: 'Accuracy',  value: `${accuracy}%`  },
           { label: 'Precision', value: `${precision}%` },
           { label: 'Recall',    value: `${recall}%`    },
         ].map((m, i) => (
-          <div key={m.label} style={{
-            flex: 1, padding: '10px 12px', textAlign: 'center',
-            borderRight: i < 2 ? '1px solid #1e2535' : 'none',
-          }}>
+          <div key={m.label} style={{ flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>{m.value}</div>
             <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{m.label}</div>
           </div>
@@ -311,38 +309,28 @@ function BinaryConfusionMatrix({ cm, label, color }) {
 }
 
 function MulticlassConfusionMatrix({ cm, label, color }) {
-  // cm = { matrix: [[...],[...],[...]], labels: ['LOW','MEDIUM','HIGH'] }
   if (!cm || !cm.matrix) return null
   const { matrix, labels } = cm
-  const total = matrix.flat().reduce((a, b) => a + b, 0)
+  const total   = matrix.flat().reduce((a, b) => a + b, 0)
   const correct = matrix.reduce((sum, row, i) => sum + row[i], 0)
   const accuracy = total > 0 ? (correct / total * 100).toFixed(1) : '—'
-
-  // Color intensity per cell — max value for scaling
-  const maxVal = Math.max(...matrix.flat(), 1)
+  const maxVal  = Math.max(...matrix.flat(), 1)
 
   const cellColor = (actual, predicted, value) => {
     if (actual === predicted) {
-      // Diagonal = correct prediction — green
       const intensity = value / maxVal
-      return {
-        bg: `rgba(16,185,129,${0.08 + intensity * 0.35})`,
-        border: `rgba(16,185,129,${0.2 + intensity * 0.4})`,
-        text: '#10b981',
-      }
+      return { bg: `rgba(16,185,129,${0.08 + intensity * 0.35})`, border: `rgba(16,185,129,${0.2 + intensity * 0.4})`, text: '#10b981' }
     }
-    // Off-diagonal = error — red, scaled by magnitude
     const intensity = value / maxVal
     return {
-      bg: intensity > 0 ? `rgba(239,68,68,${0.05 + intensity * 0.25})` : '#0f1117',
+      bg:     intensity > 0 ? `rgba(239,68,68,${0.05 + intensity * 0.25})` : '#0f1117',
       border: intensity > 0 ? `rgba(239,68,68,${0.15 + intensity * 0.3})` : '#1e2535',
-      text: intensity > 0 ? '#f87171' : '#334155',
+      text:   intensity > 0 ? '#f87171' : '#334155',
     }
   }
 
   return (
     <div className="card" style={{ padding: 24 }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: color }} />
         <div>
@@ -350,8 +338,6 @@ function MulticlassConfusionMatrix({ cm, label, color }) {
           <div style={{ fontSize: 11, color: '#64748b' }}>3-class · Test set · {total} samples · Diagonal = correct</div>
         </div>
       </div>
-
-      {/* Predicted header row */}
       <div style={{ display: 'flex', marginBottom: 6 }}>
         <div style={{ width: 80 }} />
         {labels.map(l => (
@@ -360,8 +346,6 @@ function MulticlassConfusionMatrix({ cm, label, color }) {
           </div>
         ))}
       </div>
-
-      {/* Matrix rows */}
       {matrix.map((row, i) => (
         <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
           <div style={{ width: 80, fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', paddingRight: 10 }}>
@@ -370,22 +354,125 @@ function MulticlassConfusionMatrix({ cm, label, color }) {
           {row.map((val, j) => {
             const c = cellColor(i, j, val)
             return (
-              <div key={j} style={{
-                flex: 1, background: c.bg, border: `1px solid ${c.border}`,
-                borderRadius: 6, padding: '12px 8px', textAlign: 'center',
-              }}>
+              <div key={j} style={{ flex: 1, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 6, padding: '12px 8px', textAlign: 'center' }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: c.text, lineHeight: 1 }}>{val}</div>
               </div>
             )
           })}
         </div>
       ))}
-
-      {/* Accuracy strip */}
       <div style={{ marginTop: 16, background: '#0f1117', borderRadius: 8, border: '1px solid #1e2535', padding: '10px 16px', textAlign: 'center' }}>
         <span style={{ fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>{accuracy}%</span>
         <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8 }}>Test Accuracy</span>
       </div>
+    </div>
+  )
+}
+
+// ── Anomaly Detection Card ────────────────────────────────────────────────────
+
+function AnomalyCard({ analyses }) {
+  const anomalyResults = analyses.filter(a => a.model_type === 'isolation_forest')
+  if (anomalyResults.length === 0) return null
+
+  const flagged = anomalyResults.filter(a => a.risk_label === 'ANOMALY')
+  const normal  = anomalyResults.filter(a => a.risk_label === 'NORMAL')
+
+  return (
+    <div className="card" style={{ padding: 24, marginBottom: 20, borderColor: flagged.length > 0 ? 'rgba(239,68,68,0.3)' : '#2a3347' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <div style={{ width: 3, height: 18, borderRadius: 2, background: '#ef4444' }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>Anomaly Detection — Isolation Forest</div>
+          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+            Patients whose vitals are statistically unusual compared to the population
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4,
+            background: 'rgba(239,68,68,0.15)', color: '#f87171',
+            border: '1px solid rgba(239,68,68,0.3)',
+          }}>
+            {flagged.length} flagged
+          </span>
+          <span style={{
+            fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 4,
+            background: 'rgba(16,185,129,0.1)', color: '#10b981',
+            border: '1px solid rgba(16,185,129,0.25)',
+          }}>
+            {normal.length} normal
+          </span>
+        </div>
+      </div>
+
+      {/* Stat strip */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        background: '#0f1117', border: '1px solid #1e2535',
+        borderRadius: 8, overflow: 'hidden', marginBottom: 16,
+      }}>
+        {[
+          { label: 'Total Screened', value: anomalyResults.length, color: '#3b82f6' },
+          { label: 'Anomalies',      value: flagged.length,        color: '#ef4444' },
+          { label: 'Anomaly Rate',   value: anomalyResults.length > 0 ? `${((flagged.length / anomalyResults.length) * 100).toFixed(1)}%` : '—', color: '#f59e0b' },
+        ].map((s, i) => (
+          <div key={s.label} style={{ padding: '12px 16px', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
+            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{s.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Flagged patients table — only show if any flagged */}
+      {flagged.length > 0 ? (
+        <>
+          <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+            Flagged Patients
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #2a3347' }}>
+                {['Patient', 'Anomaly Score', 'Date'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {flagged.map((a, i) => (
+                <tr key={a.id} style={{ borderBottom: '1px solid #1e2535', background: 'rgba(239,68,68,0.03)' }}>
+                  <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>
+                    {a.patient_name || <span style={{ color: '#475569' }}>Unknown</span>}
+                  </td>
+                  <td style={{ padding: '8px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 100, background: '#1e2535', borderRadius: 4, height: 6 }}>
+                        <div style={{
+                          height: 6, borderRadius: 4,
+                          width: `${(a.confidence ?? 0) * 100}%`,
+                          background: 'linear-gradient(90deg, #f59e0b, #ef4444)',
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 12, color: '#f87171', fontWeight: 600 }}>
+                        {a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}
+                      </span>
+                    </div>
+                  </td>
+                  <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569' }}>
+                    {new Date(a.created_at).toLocaleDateString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ) : (
+        <div style={{ fontSize: 13, color: '#10b981', padding: '12px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 16 }}>✓</span>
+          No anomalies detected — all screened patients are within expected population range.
+        </div>
+      )}
     </div>
   )
 }
@@ -410,16 +497,16 @@ function exportCSV(data, filename) {
 }
 
 export default function AnalysisPage() {
-  const [analyses, setAnalyses]         = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState(null)
-  const [modelFilter, setModelFilter]   = useState('')
-  const [riskFilter, setRiskFilter]     = useState('')
-  const [search, setSearch]             = useState('')
-  const [page, setPage]                 = useState(1)
+  const [analyses, setAnalyses]           = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState(null)
+  const [modelFilter, setModelFilter]     = useState('')
+  const [riskFilter, setRiskFilter]       = useState('')
+  const [search, setSearch]               = useState('')
+  const [page, setPage]                   = useState(1)
   const PAGE_SIZE = 15
   const [expandedChart, setExpandedChart] = useState(null)
-  const [latestReport, setLatestReport] = useState(null)
+  const [latestReport, setLatestReport]   = useState(null)
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -428,7 +515,6 @@ export default function AnalysisPage() {
         let all = []
         let nextPage = 1
         let hasMore = true
-
         while (hasMore) {
           const res = await getAnalyses({ page: nextPage, page_size: 100 })
           const data = res.data
@@ -453,20 +539,14 @@ export default function AnalysisPage() {
       try {
         const res = await getReports()
         const reports = res.data
-        if (reports && reports.length > 0) {
-          // Most recent report is first (ordered by -created_at on backend)
-          setLatestReport(reports[0])
-        }
-      } catch {
-        // Silently ignore — confusion matrix is optional
-      }
+        if (reports && reports.length > 0) setLatestReport(reports[0])
+      } catch { }
     }
 
     fetchAll()
     fetchLatestReport()
   }, [])
 
-  // Extract confusion matrices from the latest batch report
   const logisticCM = latestReport?.ml_results?.results?.disease_prediction?.model_info?.confusion_matrix || null
   const treeCM     = latestReport?.ml_results?.results?.diagnosis_tree?.model_info?.confusion_matrix     || null
 
@@ -480,9 +560,11 @@ export default function AnalysisPage() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const total      = analyses.length
-  const highRisk   = analyses.filter(a => a.risk_label === 'HIGH').length
-  const diabetic   = analyses.filter(a => a.result?.prediction === 'Diabetic').length
+  const total     = analyses.length
+  const highRisk  = analyses.filter(a => a.risk_label === 'HIGH').length
+  const diabetic  = analyses.filter(a => a.result?.prediction === 'Diabetic').length
+  const anomalies = analyses.filter(a => a.risk_label === 'ANOMALY').length
+
   const modelCounts = analyses.reduce((acc, a) => {
     acc[a.model_type] = (acc[a.model_type] || 0) + 1
     return acc
@@ -499,13 +581,14 @@ export default function AnalysisPage() {
       </div>
 
       {/* Stat strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, marginBottom: 24, background: '#111827', border: '1px solid #1e2535', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, marginBottom: 24, background: '#111827', border: '1px solid #1e2535', borderRadius: 8, overflow: 'hidden' }}>
         {[
-          { label: 'Total Results',  value: total,    color: '#3b82f6' },
-          { label: 'High Risk',      value: highRisk, color: '#ef4444' },
-          { label: 'Diabetic Flags', value: diabetic, color: '#f59e0b' },
+          { label: 'Total Results',  value: total,     color: '#3b82f6' },
+          { label: 'High Risk',      value: highRisk,  color: '#ef4444' },
+          { label: 'Diabetic Flags', value: diabetic,  color: '#f59e0b' },
+          { label: 'Anomalies',      value: anomalies, color: '#ef4444' },
         ].map((item, i) => (
-          <div key={item.label} style={{ padding: '16px 20px', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
+          <div key={item.label} style={{ padding: '16px 20px', borderRight: i < 3 ? '1px solid #1e2535' : 'none' }}>
             <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: item.color, lineHeight: 1 }}>{item.value ?? '—'}</div>
           </div>
@@ -604,9 +687,9 @@ export default function AnalysisPage() {
         </>
       )}
 
-      {/* ── Confusion Matrices ─────────────────────────────────────────────── */}
+      {/* Confusion Matrices */}
       {(logisticCM || treeCM) && (
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ marginBottom: 20 }}>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>Confusion Matrices</div>
             <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
@@ -631,6 +714,9 @@ export default function AnalysisPage() {
           </div>
         </div>
       )}
+
+      {/* Anomaly Detection Card — always visible when data exists, above filters */}
+      {!loading && <AnomalyCard analyses={analyses} />}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -676,6 +762,8 @@ export default function AnalysisPage() {
           <option value="LOW">Low</option>
           <option value="MEDIUM">Medium</option>
           <option value="HIGH">High</option>
+          <option value="ANOMALY">Anomaly</option>
+          <option value="NORMAL">Normal</option>
         </select>
       </div>
 
@@ -732,7 +820,9 @@ export default function AnalysisPage() {
               {paginated.map((a, i) => (
                 <tr key={a.id} style={{
                   borderBottom: '1px solid #1e2535',
-                  background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                  background: a.risk_label === 'ANOMALY'
+                    ? 'rgba(239,68,68,0.04)'
+                    : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
                 }}>
                   <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>
                     {a.patient_name || <span style={{ color: '#475569' }}>Unknown</span>}

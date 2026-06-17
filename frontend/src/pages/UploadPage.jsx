@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { analyseDataset, getReports, getReportDetail, createPatient, analysePatient, deleteReport } from '../api'
 import { Upload, FileText, X, AlertCircle, Eye, UserPlus, Trash2 } from 'lucide-react'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+} from 'recharts'
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 function Section({ title, children }) {
@@ -88,7 +91,6 @@ function ETLReportDetail({ etl }) {
         </div>
       )}
 
-      {/* Duplicates */}
       <ETLDetail
         label="Duplicate rows removed"
         items={etl.duplicate_details}
@@ -101,7 +103,6 @@ function ETLReportDetail({ etl }) {
         </>)}
       />
 
-      {/* Missing filled */}
       <ETLDetail
         label="Missing values filled with column median"
         items={etl.missing_details}
@@ -115,7 +116,6 @@ function ETLReportDetail({ etl }) {
         </>)}
       />
 
-      {/* Outliers */}
       <ETLDetail
         label="Outliers capped to clinical bounds"
         items={etl.outlier_details}
@@ -131,7 +131,6 @@ function ETLReportDetail({ etl }) {
         </>)}
       />
 
-      {/* Empty / unrecoverable rows */}
       <ETLDetail
         label="Rows removed (empty or no name)"
         items={etl.empty_row_details}
@@ -143,7 +142,6 @@ function ETLReportDetail({ etl }) {
         </>)}
       />
 
-      {/* Invalid dates */}
       <ETLDetail
         label="Unparseable dates"
         items={etl.invalid_date_details}
@@ -171,23 +169,13 @@ function RiskBadge({ risk }) {
 function ModelInfoBox({ info }) {
   if (!info) return null
 
-  // Keys to never show raw — they get their own formatted display
-  const SKIP = ['features', 'classes', 'cluster_labels', 'feature_importances', 'risk_thresholds']
+  const SKIP = ['features', 'classes', 'cluster_labels', 'feature_importances', 'risk_thresholds', 'confusion_matrix']
 
-  // Backwards-compat: old reports have 'accuracy', new ones have 'accuracy_train' + 'accuracy_test'
   const accuracy_train = info.accuracy_train ?? info.accuracy ?? null
   const accuracy_test  = info.accuracy_test  ?? null
   const r2_train       = info.r2_score_train ?? info.r2_score ?? null
   const r2_test        = info.r2_score_test  ?? null
 
-  const formatVal = (k, v) => {
-    if (v === null || v === undefined) return '—'
-    if (typeof v === 'boolean') return v ? 'Yes' : 'No'
-    if (typeof v === 'number') return String(v)
-    return String(v)
-  }
-
-  // Fields we render manually with special formatting
   const MANUAL = [
     'accuracy', 'accuracy_train', 'accuracy_test',
     'r2_score', 'r2_score_train', 'r2_score_test',
@@ -204,25 +192,24 @@ function ModelInfoBox({ info }) {
       display: 'flex', flexWrap: 'wrap', gap: '6px 20px',
       alignItems: 'center',
     }}>
-      {/* Regular fields — skip manual and skipped keys */}
       {Object.entries(info)
         .filter(([k]) => !SKIP.includes(k) && !MANUAL.includes(k))
         .map(([k, v]) => (
           <span key={k}>
             <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{k}: </span>
-            <span style={{ color: '#94a3b8' }}>{formatVal(k, v)}</span>
+            <span style={{ color: '#94a3b8' }}>
+              {v === null || v === undefined ? '—' : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v)}
+            </span>
           </span>
         ))}
 
-      {/* Train/test split sizes */}
-      {hasSplit && (
+      {hasSplit && info.test_size != null && (
         <span>
           <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>SPLIT: </span>
           <span style={{ color: '#94a3b8' }}>{info.train_size} train / {info.test_size} test</span>
         </span>
       )}
 
-      {/* Accuracy — train vs test side by side */}
       {accuracy_train != null && (
         <span>
           <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>ACCURACY: </span>
@@ -230,10 +217,7 @@ function ModelInfoBox({ info }) {
           {accuracy_test != null && (
             <>
               <span style={{ color: '#475569' }}> / </span>
-              <span style={{
-                color: accuracy_test >= accuracy_train - 0.1 ? '#10b981' : '#f59e0b',
-                fontWeight: 600,
-              }}>
+              <span style={{ color: accuracy_test >= accuracy_train - 0.1 ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
                 {(accuracy_test * 100).toFixed(1)}% test
               </span>
             </>
@@ -241,7 +225,6 @@ function ModelInfoBox({ info }) {
         </span>
       )}
 
-      {/* R² — systolic */}
       {r2_train != null && (
         <span>
           <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² SBP: </span>
@@ -249,10 +232,7 @@ function ModelInfoBox({ info }) {
           {r2_test != null && (
             <>
               <span style={{ color: '#475569' }}> / </span>
-              <span style={{
-                color: r2_test >= r2_train - 0.1 ? '#10b981' : '#f59e0b',
-                fontWeight: 600,
-              }}>
+              <span style={{ color: r2_test >= r2_train - 0.1 ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
                 {r2_test} test
               </span>
             </>
@@ -260,7 +240,6 @@ function ModelInfoBox({ info }) {
         </span>
       )}
 
-      {/* R² — diastolic */}
       {(info.r2_score_dbp_train ?? info.r2_score_dbp) != null && (
         <span>
           <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² DBP: </span>
@@ -268,10 +247,7 @@ function ModelInfoBox({ info }) {
           {info.r2_score_dbp_test != null && (
             <>
               <span style={{ color: '#475569' }}> / </span>
-              <span style={{
-                color: info.r2_score_dbp_test >= (info.r2_score_dbp_train ?? info.r2_score_dbp) - 0.1 ? '#10b981' : '#f59e0b',
-                fontWeight: 600,
-              }}>
+              <span style={{ color: info.r2_score_dbp_test >= (info.r2_score_dbp_train ?? info.r2_score_dbp) - 0.1 ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
                 {info.r2_score_dbp_test} test
               </span>
             </>
@@ -279,7 +255,6 @@ function ModelInfoBox({ info }) {
         </span>
       )}
 
-      {/* KMeans inertia */}
       {info.inertia_train != null && (
         <span>
           <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>INERTIA: </span>
@@ -292,6 +267,90 @@ function ModelInfoBox({ info }) {
           )}
         </span>
       )}
+    </div>
+  )
+}
+
+// ── Feature Importance Chart ──────────────────────────────────────────────────
+function FeatureImportanceChart({ featureImportances }) {
+  if (!featureImportances || Object.keys(featureImportances).length === 0) return null
+
+  // Sort descending by importance, format feature names
+  const FEATURE_LABELS = {
+    age:                      'Age',
+    bmi:                      'BMI',
+    glucose_level:            'Glucose',
+    blood_pressure_systolic:  'Systolic BP',
+    blood_pressure_diastolic: 'Diastolic BP',
+    heart_rate:               'Heart Rate',
+    cholesterol:              'Cholesterol',
+    is_smoker:                'Smoker',
+    has_hypertension:         'Hypertension',
+    is_diabetic:              'Diabetic',
+  }
+
+  const data = Object.entries(featureImportances)
+    .map(([key, value]) => ({
+      feature: FEATURE_LABELS[key] || key,
+      importance: value,
+      pct: (value * 100).toFixed(1),
+    }))
+    .sort((a, b) => b.importance - a.importance)
+
+  // Color scale — top feature gets brightest purple, rest fade
+  const maxImp = data[0]?.importance || 1
+  const getColor = (imp) => {
+    const intensity = imp / maxImp
+    if (intensity > 0.66) return '#8b5cf6'
+    if (intensity > 0.33) return '#6d44c4'
+    return '#4a2d8f'
+  }
+
+  return (
+    <div style={{ marginTop: 20 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
+        Feature Importance — Decision Tree
+      </div>
+      <div style={{ fontSize: 11, color: '#334155', marginBottom: 14 }}>
+        Which features the model used most to classify patient risk. Higher = more influential.
+      </div>
+      <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36)}>
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 0, right: 60, left: 90, bottom: 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e2535" horizontal={false} />
+          <XAxis
+            type="number"
+            domain={[0, maxImp * 1.1]}
+            tick={{ fill: '#475569', fontSize: 10 }}
+            tickFormatter={v => `${(v * 100).toFixed(0)}%`}
+          />
+          <YAxis
+            type="category"
+            dataKey="feature"
+            tick={{ fill: '#94a3b8', fontSize: 12 }}
+            width={85}
+          />
+          <Tooltip
+            contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
+            labelStyle={{ color: '#e2e8f0', fontWeight: 600, fontSize: 12 }}
+            formatter={(v) => [`${(v * 100).toFixed(1)}%`, 'Importance']}
+            cursor={{ fill: 'rgba(139,92,246,0.06)' }}
+          />
+          <Bar dataKey="importance" radius={[0, 4, 4, 0]} label={{
+            position: 'right',
+            formatter: (v) => `${(v * 100).toFixed(1)}%`,
+            fill: '#475569',
+            fontSize: 11,
+          }}>
+            {data.map((entry, i) => (
+              <Cell key={i} fill={getColor(entry.importance)} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   )
 }
@@ -408,6 +467,8 @@ function DiagnosisTable({ data }) {
           ))}
         </tbody>
       </table>
+      {/* Feature importance chart sits below the predictions table */}
+      <FeatureImportanceChart featureImportances={data.model_info?.feature_importances} />
     </div>
   )
 }
@@ -442,6 +503,91 @@ function RuleBasedTable({ data }) {
   )
 }
 
+function AnomalyTable({ data }) {
+  const preds    = data.predictions || []
+  const info     = data.model_info  || {}
+  const anomalyCount  = preds.filter(p => p.is_anomaly).length
+  const normalCount   = preds.length - anomalyCount
+
+  return (
+    <div>
+      <ModelInfoBox info={info} />
+
+      {/* Summary strip */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 0, marginBottom: 16,
+        background: '#0f1117', border: '1px solid #1e2535',
+        borderRadius: 8, overflow: 'hidden',
+      }}>
+        {[
+          { label: 'Total Patients', value: preds.length,  color: '#3b82f6' },
+          { label: 'Anomalies',      value: anomalyCount,  color: '#ef4444' },
+          { label: 'Normal',         value: normalCount,   color: '#10b981' },
+        ].map((s, i) => (
+          <div key={s.label} style={{ padding: '12px 16px', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
+            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{s.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+            {['Patient', 'Status', 'Anomaly Score', 'Note'].map(h => (
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {preds.map((p, i) => (
+            <tr key={i} style={{
+              borderBottom: '1px solid #1e2535',
+              background: p.is_anomaly ? 'rgba(239,68,68,0.04)' : 'transparent',
+            }}>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>
+                {p.patient_name || `Patient ${i + 1}`}
+              </td>
+              <td style={{ padding: '8px 12px' }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 4,
+                  background: p.is_anomaly ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.12)',
+                  color: p.is_anomaly ? '#f87171' : '#10b981',
+                  border: `1px solid ${p.is_anomaly ? 'rgba(239,68,68,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                }}>
+                  {p.status}
+                </span>
+              </td>
+              <td style={{ padding: '8px 12px' }}>
+                {/* Score bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flex: 1, background: '#1e2535', borderRadius: 4, height: 6, maxWidth: 120 }}>
+                    <div style={{
+                      height: 6, borderRadius: 4,
+                      width: `${(p.anomaly_score ?? 0) * 100}%`,
+                      background: p.is_anomaly
+                        ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
+                        : '#10b981',
+                      transition: 'width 0.4s ease',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 12, color: p.is_anomaly ? '#f87171' : '#64748b', fontWeight: p.is_anomaly ? 600 : 400 }}>
+                    {p.anomaly_score != null ? (p.anomaly_score * 100).toFixed(0) : '—'}%
+                  </span>
+                </div>
+              </td>
+              <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569', fontStyle: 'italic' }}>
+                {p.is_anomaly ? 'Vitals statistically unusual — review recommended' : 'Within expected population range'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function MLResults({ mlResults }) {
   const mlComponents = {
     trend_prediction:   { label: 'Trend Prediction (Linear Regression)',     Component: TrendTable },
@@ -449,7 +595,9 @@ function MLResults({ mlResults }) {
     disease_prediction: { label: 'Disease Prediction (Logistic Regression)', Component: DiseaseTable },
     diagnosis_tree:     { label: 'Diagnosis Tree (Decision Tree)',           Component: DiagnosisTable },
     rule_based:         { label: 'Rule-Based Diagnosis Engine',              Component: RuleBasedTable },
+    anomaly_detection:  { label: 'Anomaly Detection (Isolation Forest)',     Component: AnomalyTable },
   }
+
   return (
     <>
       {Object.entries(mlComponents).map(([key, { label, Component }]) => {
@@ -501,6 +649,24 @@ function printAnalysisReport(reportData) {
     `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td>${p.risk_label}</td><td>${p.risk_score}</td><td>${(p.confidence * 100).toFixed(0)}%</td><td>${p.triggered_rules?.join(', ') || 'None'}</td></tr>`
   ).join('') || ''
 
+  // Feature importance rows for print
+  const anomalyRows = results.anomaly_detection?.predictions?.map((p, i) =>
+    `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td style="color:${p.is_anomaly ? '#dc2626' : '#16a34a'};font-weight:600">${p.status}</td><td>${p.anomaly_score != null ? (p.anomaly_score * 100).toFixed(0) + '%' : '—'}</td></tr>`
+  ).join('') || ''
+  const fi = results.diagnosis_tree?.model_info?.feature_importances
+  const FEATURE_LABELS = {
+    age: 'Age', bmi: 'BMI', glucose_level: 'Glucose',
+    blood_pressure_systolic: 'Systolic BP', blood_pressure_diastolic: 'Diastolic BP',
+    heart_rate: 'Heart Rate', cholesterol: 'Cholesterol',
+    is_smoker: 'Smoker', has_hypertension: 'Hypertension',
+  }
+  const fiRows = fi
+    ? Object.entries(fi)
+        .sort(([, a], [, b]) => b - a)
+        .map(([k, v]) => `<tr><td>${FEATURE_LABELS[k] || k}</td><td>${(v * 100).toFixed(1)}%</td></tr>`)
+        .join('')
+    : ''
+
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
   <title>Analysis Report${reportData.file_name ? ' — ' + reportData.file_name : ''}</title>
   <style>
@@ -538,7 +704,9 @@ function printAnalysisReport(reportData) {
   ${clusterRows   ? modelTable('Patient Clustering (KMeans)',             `<thead><tr><th>Patient</th><th>Cluster</th><th>Risk Profile</th></tr></thead><tbody>${clusterRows}</tbody>`) : ''}
   ${diseaseRows   ? modelTable('Disease Prediction (Logistic Regression)',`<thead><tr><th>Patient</th><th>Prediction</th><th>Diabetic %</th><th>Non-Diabetic %</th></tr></thead><tbody>${diseaseRows}</tbody>`) : ''}
   ${diagnosisRows ? modelTable('Diagnosis Tree (Decision Tree)',          `<thead><tr><th>Patient</th><th>Risk Label</th><th>Confidence</th></tr></thead><tbody>${diagnosisRows}</tbody>`) : ''}
+  ${fiRows        ? modelTable('Feature Importance (Decision Tree)',      `<thead><tr><th>Feature</th><th>Importance</th></tr></thead><tbody>${fiRows}</tbody>`) : ''}
   ${ruleRows      ? modelTable('Rule-Based Diagnosis Engine',             `<thead><tr><th>Patient</th><th>Risk</th><th>Score</th><th>Confidence</th><th>Triggered Rules</th></tr></thead><tbody>${ruleRows}</tbody>`) : ''}
+  ${anomalyRows   ? modelTable('Anomaly Detection (Isolation Forest)',    `<thead><tr><th>Patient</th><th>Status</th><th>Anomaly Score</th></tr></thead><tbody>${anomalyRows}</tbody>`) : ''}
   <div class="footer"><span>Patient Diagnostic Dashboard</span><span>Confidential — For clinical use only</span></div>
   </body></html>`
 
@@ -747,18 +915,14 @@ function ManualPatientForm({ onSuccess }) {
   const handleBlur = (e) => {
     const { name } = e.target
     setTouched(t => ({ ...t, [name]: true }))
-    // Validate just this field on blur
     const fieldErrors = validateForm(form)
-    if (fieldErrors[name]) {
-      setErrors(prev => ({ ...prev, [name]: fieldErrors[name] }))
-    }
+    if (fieldErrors[name]) setErrors(prev => ({ ...prev, [name]: fieldErrors[name] }))
   }
 
   const handleSubmit = async () => {
     const errs = validateForm(form)
     if (Object.keys(errs).length > 0) {
       setErrors(errs)
-      // Touch all fields so all errors show
       const allTouched = Object.keys(form).reduce((acc, k) => ({ ...acc, [k]: true }), {})
       setTouched(allTouched)
       return
@@ -779,11 +943,7 @@ function ManualPatientForm({ onSuccess }) {
       const res = await createPatient(payload)
       const newPatient = res.data
 
-      try {
-        await analysePatient(newPatient.id)
-      } catch {
-        // Analysis failure shouldn't block success
-      }
+      try { await analysePatient(newPatient.id) } catch { }
 
       setSuccess(`Patient ${form.first_name} ${form.last_name} created and analysed successfully!`)
       setForm(EMPTY_FORM)
@@ -819,21 +979,19 @@ function ManualPatientForm({ onSuccess }) {
         <div style={{
           padding: '10px 16px', background: '#064e3b', border: '1px solid #10b981',
           borderRadius: 8, color: '#6ee7b7', fontSize: 13, marginBottom: 16,
-        }}>
-          ✓ {success}
-        </div>
+        }}>✓ {success}</div>
       )}
 
       {sectionLabel('Personal Information')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="First Name" name="first_name" value={form.first_name} onChange={handleChange} onBlur={handleBlur} error={errors.first_name} required />
-        <Field label="Last Name"  name="last_name"  value={form.last_name}  onChange={handleChange} onBlur={handleBlur} error={errors.last_name}  required />
+        <Field label="First Name"    name="first_name"    value={form.first_name}    onChange={handleChange} onBlur={handleBlur} error={errors.first_name}    required />
+        <Field label="Last Name"     name="last_name"     value={form.last_name}     onChange={handleChange} onBlur={handleBlur} error={errors.last_name}     required />
         <Field label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} onBlur={handleBlur} error={errors.date_of_birth} required />
         <Field label="Gender" name="gender" value={form.gender} onChange={handleChange} onBlur={handleBlur} error={errors.gender} required
           options={[{ value: 'M', label: 'Male' }, { value: 'F', label: 'Female' }, { value: 'O', label: 'Other' }]}
         />
         <Field label="Email" name="email" type="email" value={form.email} onChange={handleChange} onBlur={handleBlur} error={errors.email} />
-        <Field label="Phone" name="phone" value={form.phone}              onChange={handleChange} onBlur={handleBlur} error={errors.phone} />
+        <Field label="Phone" name="phone"               value={form.phone} onChange={handleChange} onBlur={handleBlur} error={errors.phone} />
       </div>
 
       {sectionLabel('Health Metrics')}
@@ -891,9 +1049,7 @@ function ManualPatientForm({ onSuccess }) {
             border: '1px solid #2a3347', borderRadius: 8,
             color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
           }}
-        >
-          Reset
-        </button>
+        >Reset</button>
       </div>
     </div>
   )
@@ -952,10 +1108,7 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
   }
 
   const handleUpload = async () => {
-    if (!file) {
-      setError('Please select a file before uploading.')
-      return
-    }
+    if (!file) { setError('Please select a file before uploading.'); return }
     setLoading(true); setError(null); setUploadResult(null); setProgress(0)
     try {
       const res = await analyseDataset(file, setProgress)
@@ -1006,7 +1159,6 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
         <button style={tabStyle(tab === 'manual')} onClick={() => setTab('manual')}>Manual Entry</button>
       </div>
 
-      {/* CSV Tab */}
       {tab === 'csv' && (
         <>
           <div className="card" style={{ padding: 24, marginBottom: 16 }}>
@@ -1165,7 +1317,6 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
         </>
       )}
 
-      {/* Manual Entry Tab */}
       {tab === 'manual' && (
         <div className="card" style={{ padding: 24 }}>
           <ManualPatientForm onSuccess={loadReports} />
@@ -1203,9 +1354,7 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
                   border: '1px solid #2a3347', borderRadius: 7,
                   color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
                 }}
-              >
-                Cancel
-              </button>
+              >Cancel</button>
               <button
                 onClick={handleDeleteReport} disabled={deleteLoading}
                 style={{
