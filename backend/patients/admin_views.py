@@ -202,7 +202,34 @@ class AdminMLHealthView(APIView):
             "kmeans",
             "logistic",
             "decision_tree",
+            "isolation_forest",
         ]
+
+        # ML_RESULTS key → model_type mapping
+        RESULTS_KEY_MAP = {
+            "rule_based": "rule_based",
+            "linear_regression": "trend_prediction",
+            "kmeans": "clustering",
+            "logistic": "disease_prediction",
+            "decision_tree": "diagnosis_tree",
+            "isolation_forest": "anomaly_detection",
+        }
+
+        # Pull the latest completed report that has real ml_results
+        latest_report = (
+            BatchAnalysisReport.objects.filter(status="completed")
+            .exclude(ml_results={})
+            .order_by("-created_at")
+            .first()
+        )
+
+        # Build a lookup: results_key → model_info dict
+        model_info_lookup = {}
+        if latest_report and isinstance(latest_report.ml_results, dict):
+            raw_results = latest_report.ml_results.get("results", {})
+            for results_key, info in raw_results.items():
+                if isinstance(info, dict):
+                    model_info_lookup[results_key] = info.get("model_info", {})
 
         data = []
         for model_type in MODEL_TYPES:
@@ -217,6 +244,14 @@ class AdminMLHealthView(APIView):
                 "MEDIUM": qs.filter(risk_label="MEDIUM").count(),
                 "LOW": qs.filter(risk_label="LOW").count(),
             }
+
+            # Pull accuracy from the latest report's model_info
+            results_key = RESULTS_KEY_MAP.get(model_type)
+            info = model_info_lookup.get(results_key, {})
+            accuracy_train = info.get("accuracy_train") or info.get("r2_score_train")
+            accuracy_test = info.get("accuracy_test") or info.get("r2_score_test")
+            metric_label = "R²" if model_type == "linear_regression" else "Acc"
+
             data.append(
                 {
                     "model_type": model_type,
@@ -228,6 +263,13 @@ class AdminMLHealthView(APIView):
                     ),
                     "last_run": agg["last_run"],
                     "risk_counts": risk_counts,
+                    "accuracy_train": (
+                        round(accuracy_train, 4) if accuracy_train is not None else None
+                    ),
+                    "accuracy_test": (
+                        round(accuracy_test, 4) if accuracy_test is not None else None
+                    ),
+                    "metric_label": metric_label,
                 }
             )
 

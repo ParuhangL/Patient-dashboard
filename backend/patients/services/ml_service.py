@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, List
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, r2_score, confusion_matrix
@@ -14,12 +15,13 @@ warnings.filterwarnings("ignore")
 
 from patients.services.base import BasePredictor
 
+# ──────────────────────────────────────────────
+# 1. TrendPredictor — Linear Regression
+# ──────────────────────────────────────────────
+
 
 class TrendPredictor(BasePredictor):
-    """
-    Predicts systolic BP trend by age using Linear Regression.
-    Inheritance: BasePredictor
-    """
+    """Predicts systolic BP trend by age using Linear Regression."""
 
     def __init__(self):
         super().__init__(model_name="TrendPredictor")
@@ -67,21 +69,19 @@ class TrendPredictor(BasePredictor):
         self.test_size = len(X_test) if X_test is not None else 0
 
         self.model.fit(X_train, y_train)
-        train_preds = self.model.predict(X_train)
-        self.r2_score = round(r2_score(y_train, train_preds), 4)
-
+        self.r2_score = round(r2_score(y_train, self.model.predict(X_train)), 4)
         if X_test is not None:
-            test_preds = self.model.predict(X_test)
-            self.r2_score_test = round(r2_score(y_test, test_preds), 4)
+            self.r2_score_test = round(r2_score(y_test, self.model.predict(X_test)), 4)
 
         if dbp_col is not None:
             self.model_dbp.fit(X_train, dbp_train)
-            train_preds_dbp = self.model_dbp.predict(X_train)
-            self.r2_score_dbp = round(r2_score(dbp_train, train_preds_dbp), 4)
-
+            self.r2_score_dbp = round(
+                r2_score(dbp_train, self.model_dbp.predict(X_train)), 4
+            )
             if dbp_test is not None:
-                test_preds_dbp = self.model_dbp.predict(X_test)
-                self.r2_score_dbp_test = round(r2_score(dbp_test, test_preds_dbp), 4)
+                self.r2_score_dbp_test = round(
+                    r2_score(dbp_test, self.model_dbp.predict(X_test)), 4
+                )
 
         self.is_fitted = True
 
@@ -121,17 +121,15 @@ class TrendPredictor(BasePredictor):
         }
 
 
-class PatientClusterer(BasePredictor):
-    """
-    Groups patients into health profiles using KMeans.
-    Inheritance: BasePredictor
-    """
+# ──────────────────────────────────────────────
+# 2. PatientClusterer — KMeans
+# ──────────────────────────────────────────────
 
-    CLUSTER_LABELS = {
-        0: "Low Risk",
-        1: "Moderate Risk",
-        2: "High Risk",
-    }
+
+class PatientClusterer(BasePredictor):
+    """Groups patients into health profiles using KMeans."""
+
+    CLUSTER_LABELS = {0: "Low Risk", 1: "Moderate Risk", 2: "High Risk"}
 
     def __init__(self, n_clusters: int = 3):
         super().__init__(model_name="PatientClusterer")
@@ -139,9 +137,9 @@ class PatientClusterer(BasePredictor):
         self.model = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
         self.scaler = StandardScaler()
         self.inertia = None
+        self.inertia_test = None
         self.train_size = None
         self.test_size = None
-        self.inertia_test = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         features = self._select_features(
@@ -149,7 +147,7 @@ class PatientClusterer(BasePredictor):
         )
         if features.empty:
             raise ValueError(
-                "PatientClusterer requires at least one of: age, bmi, blood_pressure_systolic, glucose_level"
+                "PatientClusterer requires at least one usable feature column."
             )
         self.feature_columns = list(features.columns)
 
@@ -169,11 +167,13 @@ class PatientClusterer(BasePredictor):
             scaled_test = self.scaler.transform(X_test)
             labels_test = self.model.predict(scaled_test)
             centers = self.model.cluster_centers_
-            inertia_test = sum(
-                float(np.sum((scaled_test[i] - centers[labels_test[i]]) ** 2))
-                for i in range(len(scaled_test))
+            self.inertia_test = round(
+                sum(
+                    float(np.sum((scaled_test[i] - centers[labels_test[i]]) ** 2))
+                    for i in range(len(scaled_test))
+                ),
+                4,
             )
-            self.inertia_test = round(inertia_test, 4)
 
         self.is_fitted = True
 
@@ -205,11 +205,13 @@ class PatientClusterer(BasePredictor):
         }
 
 
+# ──────────────────────────────────────────────
+# 3. DiseasePredictor — Logistic Regression
+# ──────────────────────────────────────────────
+
+
 class DiseasePredictor(BasePredictor):
-    """
-    Predicts diabetes probability using Logistic Regression.
-    Inheritance: BasePredictor
-    """
+    """Predicts diabetes probability using Logistic Regression."""
 
     def __init__(self):
         super().__init__(model_name="DiseasePredictor")
@@ -220,7 +222,7 @@ class DiseasePredictor(BasePredictor):
         self.train_size = None
         self.test_size = None
         self.classes = None
-        self.confusion_matrix = None  # computed on test set
+        self.confusion_matrix = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         if y is None:
@@ -255,17 +257,14 @@ class DiseasePredictor(BasePredictor):
 
         scaled_train = self.scaler.fit_transform(X_train)
         self.model.fit(scaled_train, y_train)
-
-        train_preds = self.model.predict(scaled_train)
-        self.accuracy_train = round(accuracy_score(y_train, train_preds), 4)
+        self.accuracy_train = round(
+            accuracy_score(y_train, self.model.predict(scaled_train)), 4
+        )
 
         if X_test is not None:
             scaled_test = self.scaler.transform(X_test)
             test_preds = self.model.predict(scaled_test)
             self.accuracy_test = round(accuracy_score(y_test, test_preds), 4)
-
-            # Confusion matrix on test set — rows=actual, cols=predicted
-            # Classes are [0=Non-Diabetic, 1=Diabetic]
             cm = confusion_matrix(y_test, test_preds, labels=[0, 1])
             self.confusion_matrix = {
                 "TN": int(cm[0][0]),
@@ -308,11 +307,13 @@ class DiseasePredictor(BasePredictor):
         }
 
 
+# ──────────────────────────────────────────────
+# 4. DiagnosisTreePredictor — Decision Tree
+# ──────────────────────────────────────────────
+
+
 class DiagnosisTreePredictor(BasePredictor):
-    """
-    Interpretable diagnosis using Decision Tree.
-    Inheritance: BasePredictor
-    """
+    """Interpretable diagnosis using Decision Tree."""
 
     RISK_LABELS = {0: "LOW", 1: "MEDIUM", 2: "HIGH"}
 
@@ -327,7 +328,7 @@ class DiagnosisTreePredictor(BasePredictor):
         self.train_size = None
         self.test_size = None
         self.feature_importances = None
-        self.confusion_matrix = None  # computed on test set
+        self.confusion_matrix = None
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
         if y is None:
@@ -363,16 +364,13 @@ class DiagnosisTreePredictor(BasePredictor):
         self.test_size = len(X_test) if X_test is not None else 0
 
         self.model.fit(X_train, y_train)
-
-        train_preds = self.model.predict(X_train)
-        self.accuracy_train = round(accuracy_score(y_train, train_preds), 4)
+        self.accuracy_train = round(
+            accuracy_score(y_train, self.model.predict(X_train)), 4
+        )
 
         if X_test is not None:
             test_preds = self.model.predict(X_test)
             self.accuracy_test = round(accuracy_score(y_test, test_preds), 4)
-
-            # Confusion matrix on test set — rows=actual, cols=predicted
-            # Classes: 0=LOW, 1=MEDIUM, 2=HIGH
             cm = confusion_matrix(y_test, test_preds, labels=[0, 1, 2])
             self.confusion_matrix = {
                 "matrix": [[int(cell) for cell in row] for row in cm],
@@ -417,6 +415,11 @@ class DiagnosisTreePredictor(BasePredictor):
             "feature_importances": self.feature_importances,
             "confusion_matrix": self.confusion_matrix,
         }
+
+
+# ──────────────────────────────────────────────
+# 5. RuleBasedPredictor — Rule Engine
+# ──────────────────────────────────────────────
 
 
 class RuleBasedPredictor(BasePredictor):
@@ -541,11 +544,7 @@ class RuleBasedPredictor(BasePredictor):
         },
     ]
 
-    RISK_THRESHOLDS = {
-        "LOW": (0, 2),
-        "MEDIUM": (3, 5),
-        "HIGH": (6, 999),
-    }
+    RISK_THRESHOLDS = {"LOW": (0, 2), "MEDIUM": (3, 5), "HIGH": (6, 999)}
 
     def __init__(self):
         super().__init__(model_name="RuleBasedPredictor")
@@ -605,6 +604,101 @@ class RuleBasedPredictor(BasePredictor):
         }
 
 
+# ──────────────────────────────────────────────
+# 6. AnomalyDetector — Isolation Forest
+# ──────────────────────────────────────────────
+
+
+class AnomalyDetector(BasePredictor):
+    """
+    Detects statistically unusual patients using Isolation Forest.
+    Unsupervised — no target label needed.
+    Encapsulation: anomaly score interpretation is hidden behind predict().
+    Inheritance: BasePredictor.
+    """
+
+    FEATURE_COLS = [
+        "age",
+        "bmi",
+        "glucose_level",
+        "blood_pressure_systolic",
+        "blood_pressure_diastolic",
+        "heart_rate",
+        "cholesterol",
+    ]
+
+    def __init__(self, contamination: float = 0.1):
+        super().__init__(model_name="AnomalyDetector")
+        # contamination = expected proportion of outliers in the dataset
+        self.contamination = contamination
+        self.model = IsolationForest(
+            n_estimators=100,
+            contamination=contamination,
+            random_state=42,
+        )
+        self.scaler = StandardScaler()
+        self.train_size = None
+        self.anomaly_rate = None  # actual % flagged on training set
+
+    def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> None:
+        features = self._select_features(X, self.FEATURE_COLS)
+        if features.empty:
+            raise ValueError("AnomalyDetector: no usable feature columns found.")
+        self.feature_columns = list(features.columns)
+        self.train_size = len(features)
+
+        scaled = self.scaler.fit_transform(features)
+        self.model.fit(scaled)
+
+        # Record how many were flagged on the training set itself
+        train_preds = self.model.predict(scaled)  # -1 = anomaly, 1 = normal
+        flagged = int(np.sum(train_preds == -1))
+        self.anomaly_rate = round(flagged / len(train_preds), 4)
+
+        self.is_fitted = True
+
+    def predict(self, X: pd.DataFrame) -> List[Dict]:
+        self._check_fitted()
+        features = self._select_features(X, self.feature_columns)
+        scaled = self.scaler.transform(features)
+
+        # predict() returns -1 (anomaly) or 1 (normal)
+        labels = self.model.predict(scaled)
+
+        # score_samples() returns negative anomaly scores —
+        # more negative = more anomalous. We invert and normalise to 0–1.
+        raw_scores = self.model.score_samples(scaled)
+        # raw_scores are negative; shift so higher = more anomalous
+        anomaly_scores = -raw_scores
+        min_s, max_s = anomaly_scores.min(), anomaly_scores.max()
+        span = max_s - min_s if max_s > min_s else 1.0
+        normalised = ((anomaly_scores - min_s) / span).tolist()
+
+        return [
+            {
+                "is_anomaly": bool(label == -1),
+                "anomaly_score": round(float(score), 4),  # 0=normal, 1=most anomalous
+                "status": "ANOMALY" if label == -1 else "NORMAL",
+            }
+            for label, score in zip(labels, normalised)
+        ]
+
+    def get_model_info(self) -> Dict[str, Any]:
+        return {
+            "model": self.model_name,
+            "algorithm": "Isolation Forest",
+            "features": self.feature_columns,
+            "contamination": self.contamination,
+            "patients_trained_on": self.train_size,
+            "anomaly_rate_train": self.anomaly_rate,
+        }
+
+
+# ──────────────────────────────────────────────
+# 7. MLAnalysisService — Orchestrator
+# ──────────────────────────────────────────────
+
+
 class MLAnalysisService:
     """
     Orchestrates all ML models on a cleaned DataFrame.
@@ -621,6 +715,9 @@ class MLAnalysisService:
         )
         self.diagnosis_tree = (
             BasePredictor.load("DiagnosisTreePredictor") or DiagnosisTreePredictor()
+        )
+        self.anomaly_detector = (
+            BasePredictor.load("AnomalyDetector") or AnomalyDetector()
         )
         self.rule_predictor = RuleBasedPredictor()
 
@@ -639,12 +736,10 @@ class MLAnalysisService:
             "is_diabetic",
             "has_hypertension",
         )
-
         if not qs.exists():
             return pd.DataFrame()
 
         df = pd.DataFrame.from_records(qs)
-
         today = date_type.today()
         df["age"] = df["date_of_birth"].apply(
             lambda d: (today - d).days // 365 if pd.notna(d) and d is not None else None
@@ -664,10 +759,9 @@ class MLAnalysisService:
             "bmi",
             "cholesterol",
         ]
-        existing_numeric = [c for c in numeric_cols if c in df.columns]
-        df = df.dropna(subset=existing_numeric, how="all")
-
-        for col in existing_numeric:
+        existing = [c for c in numeric_cols if c in df.columns]
+        df = df.dropna(subset=existing, how="all")
+        for col in existing:
             if df[col].isnull().any():
                 df[col] = df[col].fillna(df[col].median())
 
@@ -781,6 +875,17 @@ class MLAnalysisService:
             }
         except Exception as e:
             errors["rule_based"] = str(e)
+
+        # 6. AnomalyDetector
+        try:
+            self.anomaly_detector.fit(train_df)
+            self.anomaly_detector.save()
+            results["anomaly_detection"] = {
+                "predictions": self.anomaly_detector.predict(df),
+                "model_info": self.anomaly_detector.get_model_info(),
+            }
+        except Exception as e:
+            errors["anomaly_detection"] = str(e)
 
         return {
             "status": "completed" if not errors else "partial",
