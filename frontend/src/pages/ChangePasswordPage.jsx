@@ -42,24 +42,23 @@ export default function ChangePasswordPage() {
     new_password: false,
     confirm_password: false,
   })
-  const [loading, setLoading]     = useState(false)
+  const [loading, setLoading]         = useState(false)
   const [serverError, setServerError] = useState('')
-  const [success, setSuccess]     = useState(false)
+  const [success, setSuccess]         = useState(false)
 
   const getError = (key) => {
     if (!touched[key]) return ''
     return RULES[key](form[key], form)
   }
 
-  const handleBlur  = (key) => setTouched(t => ({ ...t, [key]: true }))
+  const handleBlur   = (key) => setTouched(t => ({ ...t, [key]: true }))
   const handleChange = (key, value) => {
     setForm(f => ({ ...f, [key]: value }))
     if (serverError) setServerError('')
     if (success) setSuccess(false)
   }
 
-  const isFormValid = () =>
-    FIELDS.every(k => RULES[k](form[k], form) === '')
+  const isFormValid = () => FIELDS.every(k => RULES[k](form[k], form) === '')
 
   const handleSubmit = async () => {
     setTouched({ current_password: true, new_password: true, confirm_password: true })
@@ -89,32 +88,29 @@ export default function ChangePasswordPage() {
 
   return (
     <div>
-      {/* Page header */}
       <div style={{
-        borderBottom: '1px solid #2a3347',
+        borderBottom: '1px solid var(--border)',
         paddingBottom: 16,
         marginBottom: 28,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Change Password
           </h1>
         </div>
-        <p style={{ fontSize: 13, color: '#64748b', marginTop: 4, marginLeft: 28 }}>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginLeft: 28 }}>
           Update your account password
         </p>
       </div>
 
-      {/* Card */}
       <div style={{
         maxWidth: 440,
-        background: '#161b27',
-        border: '1px solid #2a3347',
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
         borderRadius: 12,
         padding: 32,
       }}>
 
-        {/* Server error */}
         {serverError && (
           <div style={{
             background: 'rgba(239,68,68,0.1)',
@@ -129,7 +125,6 @@ export default function ChangePasswordPage() {
           </div>
         )}
 
-        {/* Success banner */}
         {success && (
           <div style={{
             display: 'flex',
@@ -148,14 +143,13 @@ export default function ChangePasswordPage() {
           </div>
         )}
 
-        {/* Fields */}
         {FIELDS.map((key) => {
           const err = getError(key)
           return (
             <div key={key} style={{ marginBottom: 18 }}>
               <label style={{
                 fontSize: 12,
-                color: '#94a3b8',
+                color: 'var(--text-secondary)',
                 display: 'block',
                 marginBottom: 6,
                 textTransform: 'uppercase',
@@ -175,9 +169,9 @@ export default function ChangePasswordPage() {
                     width: '100%',
                     padding: '10px 40px 10px 14px',
                     borderRadius: 8,
-                    background: '#0f1117',
-                    border: `1px solid ${err ? '#ef4444' : '#2a3347'}`,
-                    color: '#e2e8f0',
+                    background: 'var(--bg-base)',
+                    border: `1px solid ${err ? '#ef4444' : 'var(--border)'}`,
+                    color: 'var(--text-primary)',
                     fontSize: 14,
                     outline: 'none',
                     boxSizing: 'border-box',
@@ -194,7 +188,7 @@ export default function ChangePasswordPage() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: '#64748b',
+                    color: 'var(--text-muted)',
                     padding: 0,
                   }}
                 >
@@ -208,17 +202,15 @@ export default function ChangePasswordPage() {
           )
         })}
 
-        {/* Requirements hint */}
         <div style={{
           fontSize: 11,
-          color: '#475569',
+          color: 'var(--text-muted)',
           marginBottom: 24,
           lineHeight: 1.6,
         }}>
           New password must be at least 8 characters and contain at least one letter and one number.
         </div>
 
-        {/* Submit */}
         <button
           onClick={handleSubmit}
           disabled={loading}
@@ -227,8 +219,8 @@ export default function ChangePasswordPage() {
             padding: '11px',
             borderRadius: 8,
             border: 'none',
-            background: loading ? '#1e3a5f' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-            color: 'white',
+            background: loading ? 'var(--bg-surface-alt)' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+            color: loading ? 'var(--text-muted)' : 'white',
             fontSize: 14,
             fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer',

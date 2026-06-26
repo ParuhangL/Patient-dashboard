@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 from pathlib import Path
 import joblib
 
-# Absolute path to saved_models/ — works regardless of where Django is invoked from
 SAVED_MODELS_DIR = Path(__file__).resolve().parent.parent.parent / "saved_models"
 SAVED_MODELS_DIR.mkdir(exist_ok=True)
 
@@ -56,8 +55,6 @@ class BasePredictor(ABC):
                 f"[{self.model_name}] Warning: missing columns {missing}, skipping them."
             )
         return df[available].copy()
-
-    # ── Persistence ────────────────────────────────────────────────────────────
 
     def _model_path(self) -> Path:
         """Returns the .joblib file path for this predictor."""

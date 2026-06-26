@@ -5,11 +5,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 
-// ── Shared helpers ────────────────────────────────────────────────────────────
 function Section({ title, children }) {
   return (
     <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-      <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 16 }}>{title}</div>
+      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>{title}</div>
       {children}
     </div>
   )
@@ -17,9 +16,9 @@ function Section({ title, children }) {
 
 function StatMini({ label, value, color = '#3b82f6' }) {
   return (
-    <div style={{ background: '#0f1117', borderRadius: 8, padding: '12px 16px' }}>
+    <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: '12px 16px' }}>
       <div style={{ fontSize: 22, fontWeight: 700, color }}>{value ?? '—'}</div>
-      <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
     </div>
   )
 }
@@ -45,16 +44,16 @@ function ETLDetail({ label, items, color = '#f59e0b', columns, renderRow }) {
       </button>
       {open && (
         <div style={{
-          marginTop: 8, background: '#0f1117', borderRadius: 8,
-          border: '1px solid #2a3347', overflow: 'hidden',
+          marginTop: 8, background: 'var(--bg-base)', borderRadius: 8,
+          border: '1px solid var(--border)', overflow: 'hidden',
         }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #2a3347' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {columns.map(c => (
                   <th key={c} style={{
                     padding: '7px 12px', textAlign: 'left',
-                    fontSize: 10, color: '#475569',
+                    fontSize: 10, color: 'var(--text-secondary)',
                     textTransform: 'uppercase', letterSpacing: '0.4px',
                   }}>{c}</th>
                 ))}
@@ -62,7 +61,7 @@ function ETLDetail({ label, items, color = '#f59e0b', columns, renderRow }) {
             </thead>
             <tbody>
               {items.map((item, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
+                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                   {renderRow(item)}
                 </tr>
               ))}
@@ -97,9 +96,9 @@ function ETLReportDetail({ etl }) {
         color="#f59e0b"
         columns={['Row', 'Name', 'Date of Birth']}
         renderRow={item => (<>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.dob || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-primary)' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>{item.dob || '—'}</td>
         </>)}
       />
 
@@ -109,9 +108,9 @@ function ETLReportDetail({ etl }) {
         color="#10b981"
         columns={['Row', 'Name', 'Column', 'Filled With']}
         renderRow={item => (<>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.column}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-primary)' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>{item.column}</td>
           <td style={{ padding: '6px 12px', fontSize: 12, color: '#10b981', fontWeight: 600 }}>{item.filled_with}</td>
         </>)}
       />
@@ -122,12 +121,12 @@ function ETLReportDetail({ etl }) {
         color="#06b6d4"
         columns={['Row', 'Name', 'Column', 'Original', 'Capped To', 'Bound']}
         renderRow={item => (<>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.column}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-primary)' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>{item.column}</td>
           <td style={{ padding: '6px 12px', fontSize: 12, color: '#ef4444', fontWeight: 600 }}>{item.original}</td>
           <td style={{ padding: '6px 12px', fontSize: 12, color: '#06b6d4', fontWeight: 600 }}>{item.capped_to}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>{item.bound}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>{item.bound}</td>
         </>)}
       />
 
@@ -137,8 +136,8 @@ function ETLReportDetail({ etl }) {
         color="#ef4444"
         columns={['Row', 'Reason']}
         renderRow={item => (<>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#94a3b8' }}>{item.reason}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>{item.reason}</td>
         </>)}
       />
 
@@ -148,10 +147,10 @@ function ETLReportDetail({ etl }) {
         color="#8b5cf6"
         columns={['Row', 'Name', 'Value', 'Note']}
         renderRow={item => (<>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#475569' }}>#{item.row}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#e2e8f0' }}>{item.name || '—'}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>#{item.row}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-primary)' }}>{item.name || '—'}</td>
           <td style={{ padding: '6px 12px', fontSize: 12, color: '#ef4444' }}>{item.value}</td>
-          <td style={{ padding: '6px 12px', fontSize: 12, color: '#64748b' }}>{item.reason}</td>
+          <td style={{ padding: '6px 12px', fontSize: 12, color: 'var(--text-muted)' }}>{item.reason}</td>
         </>)}
       />
     </div>
@@ -159,11 +158,9 @@ function ETLReportDetail({ etl }) {
 }
 
 function RiskBadge({ risk }) {
-  const map = {
-    HIGH: 'badge-high', MEDIUM: 'badge-medium', LOW: 'badge-low',
-    'High Risk': 'badge-high', 'Moderate Risk': 'badge-medium', 'Low Risk': 'badge-low',
-  }
-  return <span className={map[risk] || 'badge-low'}>{risk}</span>
+  const bgVar   = risk === 'LOW' || risk === 'Low Risk'      ? 'var(--risk-low-bg)'   : risk === 'MEDIUM' || risk === 'Moderate Risk' ? 'var(--risk-med-bg)'   : 'var(--risk-high-bg)'
+  const textVar = risk === 'LOW' || risk === 'Low Risk'      ? 'var(--risk-low-text)' : risk === 'MEDIUM' || risk === 'Moderate Risk' ? 'var(--risk-med-text)' : 'var(--risk-high-text)'
+  return <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: bgVar, color: textVar }}>{risk}</span>
 }
 
 function ModelInfoBox({ info }) {
@@ -187,8 +184,8 @@ function ModelInfoBox({ info }) {
 
   return (
     <div style={{
-      background: '#0f1117', borderRadius: 8, padding: '10px 14px',
-      fontSize: 11, color: '#64748b', marginBottom: 12,
+      background: 'var(--bg-base)', borderRadius: 8, padding: '10px 14px',
+      fontSize: 11, color: 'var(--text-muted)', marginBottom: 12,
       display: 'flex', flexWrap: 'wrap', gap: '6px 20px',
       alignItems: 'center',
     }}>
@@ -196,8 +193,8 @@ function ModelInfoBox({ info }) {
         .filter(([k]) => !SKIP.includes(k) && !MANUAL.includes(k))
         .map(([k, v]) => (
           <span key={k}>
-            <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{k}: </span>
-            <span style={{ color: '#94a3b8' }}>
+            <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{k}: </span>
+            <span style={{ color: 'var(--text-primary)' }}>
               {v === null || v === undefined ? '—' : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v)}
             </span>
           </span>
@@ -205,18 +202,18 @@ function ModelInfoBox({ info }) {
 
       {hasSplit && info.test_size != null && (
         <span>
-          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>SPLIT: </span>
-          <span style={{ color: '#94a3b8' }}>{info.train_size} train / {info.test_size} test</span>
+          <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>SPLIT: </span>
+          <span style={{ color: 'var(--text-primary)' }}>{info.train_size} train / {info.test_size} test</span>
         </span>
       )}
 
       {accuracy_train != null && (
         <span>
-          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>ACCURACY: </span>
-          <span style={{ color: '#94a3b8' }}>{(accuracy_train * 100).toFixed(1)}% train</span>
+          <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>ACCURACY: </span>
+          <span style={{ color: 'var(--text-primary)' }}>{(accuracy_train * 100).toFixed(1)}% train</span>
           {accuracy_test != null && (
             <>
-              <span style={{ color: '#475569' }}> / </span>
+              <span style={{ color: 'var(--text-secondary)' }}> / </span>
               <span style={{ color: accuracy_test >= accuracy_train - 0.1 ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
                 {(accuracy_test * 100).toFixed(1)}% test
               </span>
@@ -227,11 +224,11 @@ function ModelInfoBox({ info }) {
 
       {r2_train != null && (
         <span>
-          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² SBP: </span>
-          <span style={{ color: '#94a3b8' }}>{r2_train} train</span>
+          <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² SBP: </span>
+          <span style={{ color: 'var(--text-primary)' }}>{r2_train} train</span>
           {r2_test != null && (
             <>
-              <span style={{ color: '#475569' }}> / </span>
+              <span style={{ color: 'var(--text-secondary)' }}> / </span>
               <span style={{ color: r2_test >= r2_train - 0.1 ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
                 {r2_test} test
               </span>
@@ -242,11 +239,11 @@ function ModelInfoBox({ info }) {
 
       {(info.r2_score_dbp_train ?? info.r2_score_dbp) != null && (
         <span>
-          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² DBP: </span>
-          <span style={{ color: '#94a3b8' }}>{info.r2_score_dbp_train ?? info.r2_score_dbp} train</span>
+          <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>R² DBP: </span>
+          <span style={{ color: 'var(--text-primary)' }}>{info.r2_score_dbp_train ?? info.r2_score_dbp} train</span>
           {info.r2_score_dbp_test != null && (
             <>
-              <span style={{ color: '#475569' }}> / </span>
+              <span style={{ color: 'var(--text-secondary)' }}> / </span>
               <span style={{ color: info.r2_score_dbp_test >= (info.r2_score_dbp_train ?? info.r2_score_dbp) - 0.1 ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
                 {info.r2_score_dbp_test} test
               </span>
@@ -257,12 +254,12 @@ function ModelInfoBox({ info }) {
 
       {info.inertia_train != null && (
         <span>
-          <span style={{ color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>INERTIA: </span>
-          <span style={{ color: '#94a3b8' }}>{info.inertia_train} train</span>
+          <span style={{ color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>INERTIA: </span>
+          <span style={{ color: 'var(--text-primary)' }}>{info.inertia_train} train</span>
           {info.inertia_test != null && (
             <>
-              <span style={{ color: '#475569' }}> / </span>
-              <span style={{ color: '#94a3b8' }}>{info.inertia_test} test</span>
+              <span style={{ color: 'var(--text-secondary)' }}> / </span>
+              <span style={{ color: 'var(--text-primary)' }}>{info.inertia_test} test</span>
             </>
           )}
         </span>
@@ -271,11 +268,9 @@ function ModelInfoBox({ info }) {
   )
 }
 
-// ── Feature Importance Chart ──────────────────────────────────────────────────
 function FeatureImportanceChart({ featureImportances }) {
   if (!featureImportances || Object.keys(featureImportances).length === 0) return null
 
-  // Sort descending by importance, format feature names
   const FEATURE_LABELS = {
     age:                      'Age',
     bmi:                      'BMI',
@@ -297,7 +292,6 @@ function FeatureImportanceChart({ featureImportances }) {
     }))
     .sort((a, b) => b.importance - a.importance)
 
-  // Color scale — top feature gets brightest purple, rest fade
   const maxImp = data[0]?.importance || 1
   const getColor = (imp) => {
     const intensity = imp / maxImp
@@ -308,10 +302,10 @@ function FeatureImportanceChart({ featureImportances }) {
 
   return (
     <div style={{ marginTop: 20 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
         Feature Importance — Decision Tree
       </div>
-      <div style={{ fontSize: 11, color: '#334155', marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 14 }}>
         Which features the model used most to classify patient risk. Higher = more influential.
       </div>
       <ResponsiveContainer width="100%" height={Math.max(160, data.length * 36)}>
@@ -320,29 +314,29 @@ function FeatureImportanceChart({ featureImportances }) {
           layout="vertical"
           margin={{ top: 0, right: 60, left: 90, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e2535" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
           <XAxis
             type="number"
             domain={[0, maxImp * 1.1]}
-            tick={{ fill: '#475569', fontSize: 10 }}
+            tick={{ fill: 'var(--text-secondary)', fontSize: 10 }}
             tickFormatter={v => `${(v * 100).toFixed(0)}%`}
           />
           <YAxis
             type="category"
             dataKey="feature"
-            tick={{ fill: '#94a3b8', fontSize: 12 }}
+            tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
             width={85}
           />
           <Tooltip
-            contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
-            labelStyle={{ color: '#e2e8f0', fontWeight: 600, fontSize: 12 }}
+            contentStyle={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 8 }}
+            labelStyle={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: 12 }}
             formatter={(v) => [`${(v * 100).toFixed(1)}%`, 'Importance']}
             cursor={{ fill: 'rgba(139,92,246,0.06)' }}
           />
           <Bar dataKey="importance" radius={[0, 4, 4, 0]} label={{
             position: 'right',
             formatter: (v) => `${(v * 100).toFixed(1)}%`,
-            fill: '#475569',
+            fill: 'var(--text-muted)',
             fontSize: 11,
           }}>
             {data.map((entry, i) => (
@@ -361,9 +355,9 @@ function TrendTable({ data }) {
       <ModelInfoBox info={data.model_info} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Patient', 'Predicted Systolic BP', 'Predicted Diastolic BP'].map(h => (
-              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -373,10 +367,10 @@ function TrendTable({ data }) {
             const sbp  = typeof val === 'object' ? (val.predicted_bp ?? val.value ?? val.predicted_systolic_bp) : val
             const dbp  = typeof val === 'object' ? val.predicted_diastolic_bp : null
             return (
-              <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
-                <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{name || `Patient ${i + 1}`}</td>
-                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{sbp != null ? Number(sbp).toFixed(1) : '—'} mmHg</td>
-                <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{dbp != null ? Number(dbp).toFixed(1) : '—'} mmHg</td>
+              <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{name || `Patient ${i + 1}`}</td>
+                <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{sbp != null ? Number(sbp).toFixed(1) : '—'} mmHg</td>
+                <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{dbp != null ? Number(dbp).toFixed(1) : '—'} mmHg</td>
               </tr>
             )
           })}
@@ -392,17 +386,17 @@ function ClusterTable({ data }) {
       <ModelInfoBox info={data.model_info} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Patient', 'Cluster', 'Risk Profile'].map(h => (
-              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.predictions.map((p, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{p.patient_name || `Patient ${i + 1}`}</td>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{p.cluster_id}</td>
+            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{p.patient_name || `Patient ${i + 1}`}</td>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{p.cluster_id}</td>
               <td style={{ padding: '8px 12px' }}><RiskBadge risk={p.profile} /></td>
             </tr>
           ))}
@@ -418,21 +412,21 @@ function DiseaseTable({ data }) {
       <ModelInfoBox info={data.model_info} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Patient', 'Prediction', 'Diabetic %', 'Non-Diabetic %'].map(h => (
-              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.predictions.map((p, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{p.patient_name || `Patient ${i + 1}`}</td>
+            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{p.patient_name || `Patient ${i + 1}`}</td>
               <td style={{ padding: '8px 12px' }}>
                 <span style={{
                   fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                  background: p.prediction === 'Diabetic' ? '#7f1d1d' : '#064e3b',
-                  color: p.prediction === 'Diabetic' ? '#fca5a5' : '#6ee7b7',
+                  background: p.prediction === 'Diabetic' ? 'var(--risk-high-bg)' : 'var(--risk-low-bg)',
+                  color: p.prediction === 'Diabetic' ? 'var(--risk-high-text)' : 'var(--risk-low-text)',
                 }}>{p.prediction}</span>
               </td>
               <td style={{ padding: '8px 12px', fontSize: 13, color: '#f59e0b' }}>{(p.probability_diabetic * 100).toFixed(1)}%</td>
@@ -451,23 +445,22 @@ function DiagnosisTable({ data }) {
       <ModelInfoBox info={data.model_info} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Patient', 'Risk Label', 'Confidence'].map(h => (
-              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.predictions.map((p, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{p.patient_name || `Patient ${i + 1}`}</td>
+            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{p.patient_name || `Patient ${i + 1}`}</td>
               <td style={{ padding: '8px 12px' }}><RiskBadge risk={p.risk_label} /></td>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0' }}>{(p.confidence * 100).toFixed(0)}%</td>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)' }}>{(p.confidence * 100).toFixed(0)}%</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {/* Feature importance chart sits below the predictions table */}
       <FeatureImportanceChart featureImportances={data.model_info?.feature_importances} />
     </div>
   )
@@ -479,21 +472,21 @@ function RuleBasedTable({ data }) {
       <ModelInfoBox info={data.model_info} />
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Patient', 'Risk Label', 'Risk Score', 'Confidence', 'Triggered Rules'].map(h => (
-              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.predictions.map((p, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #1e2535' }}>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{p.patient_name || `Patient ${i + 1}`}</td>
+            <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{p.patient_name || `Patient ${i + 1}`}</td>
               <td style={{ padding: '8px 12px' }}><RiskBadge risk={p.risk_label} /></td>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>{p.risk_score}</td>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0' }}>{(p.confidence * 100).toFixed(0)}%</td>
-              <td style={{ padding: '8px 12px', fontSize: 12, color: '#64748b', maxWidth: 300 }}>
-                {p.triggered_rules?.length > 0 ? p.triggered_rules.join(' · ') : <span style={{ color: '#475569', fontStyle: 'italic' }}>None</span>}
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{p.risk_score}</td>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)' }}>{(p.confidence * 100).toFixed(0)}%</td>
+              <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)', maxWidth: 300 }}>
+                {p.triggered_rules?.length > 0 ? p.triggered_rules.join(' · ') : <span style={{ color: 'var(--text-faint)', fontStyle: 'italic' }}>None</span>}
               </td>
             </tr>
           ))}
@@ -504,20 +497,19 @@ function RuleBasedTable({ data }) {
 }
 
 function AnomalyTable({ data }) {
-  const preds    = data.predictions || []
-  const info     = data.model_info  || {}
-  const anomalyCount  = preds.filter(p => p.is_anomaly).length
-  const normalCount   = preds.length - anomalyCount
+  const preds       = data.predictions || []
+  const info        = data.model_info  || {}
+  const anomalyCount = preds.filter(p => p.is_anomaly).length
+  const normalCount  = preds.length - anomalyCount
 
   return (
     <div>
       <ModelInfoBox info={info} />
 
-      {/* Summary strip */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
         gap: 0, marginBottom: 16,
-        background: '#0f1117', border: '1px solid #1e2535',
+        background: 'var(--bg-base)', border: '1px solid var(--border)',
         borderRadius: 8, overflow: 'hidden',
       }}>
         {[
@@ -525,8 +517,8 @@ function AnomalyTable({ data }) {
           { label: 'Anomalies',      value: anomalyCount,  color: '#ef4444' },
           { label: 'Normal',         value: normalCount,   color: '#10b981' },
         ].map((s, i) => (
-          <div key={s.label} style={{ padding: '12px 16px', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
-            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{s.label}</div>
+          <div key={s.label} style={{ padding: '12px 16px', borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{s.label}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
         ))}
@@ -534,19 +526,19 @@ function AnomalyTable({ data }) {
 
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
-          <tr style={{ borderBottom: '1px solid #2a3347' }}>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
             {['Patient', 'Status', 'Anomaly Score', 'Note'].map(h => (
-              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+              <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {preds.map((p, i) => (
             <tr key={i} style={{
-              borderBottom: '1px solid #1e2535',
+              borderBottom: '1px solid var(--border)',
               background: p.is_anomaly ? 'rgba(239,68,68,0.04)' : 'transparent',
             }}>
-              <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>
+              <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>
                 {p.patient_name || `Patient ${i + 1}`}
               </td>
               <td style={{ padding: '8px 12px' }}>
@@ -560,24 +552,21 @@ function AnomalyTable({ data }) {
                 </span>
               </td>
               <td style={{ padding: '8px 12px' }}>
-                {/* Score bar */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ flex: 1, background: '#1e2535', borderRadius: 4, height: 6, maxWidth: 120 }}>
+                  <div style={{ flex: 1, background: 'var(--border)', borderRadius: 4, height: 6, maxWidth: 120 }}>
                     <div style={{
                       height: 6, borderRadius: 4,
                       width: `${(p.anomaly_score ?? 0) * 100}%`,
-                      background: p.is_anomaly
-                        ? 'linear-gradient(90deg, #f59e0b, #ef4444)'
-                        : '#10b981',
+                      background: p.is_anomaly ? 'linear-gradient(90deg, #f59e0b, #ef4444)' : '#10b981',
                       transition: 'width 0.4s ease',
                     }} />
                   </div>
-                  <span style={{ fontSize: 12, color: p.is_anomaly ? '#f87171' : '#64748b', fontWeight: p.is_anomaly ? 600 : 400 }}>
+                  <span style={{ fontSize: 12, color: p.is_anomaly ? '#f87171' : 'var(--text-muted)', fontWeight: p.is_anomaly ? 600 : 400 }}>
                     {p.anomaly_score != null ? (p.anomaly_score * 100).toFixed(0) : '—'}%
                   </span>
                 </div>
               </td>
-              <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569', fontStyle: 'italic' }}>
+              <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
                 {p.is_anomaly ? 'Vitals statistically unusual — review recommended' : 'Within expected population range'}
               </td>
             </tr>
@@ -613,7 +602,6 @@ function MLResults({ mlResults }) {
   )
 }
 
-// ── Print Report ──────────────────────────────────────────────────────────────
 function printAnalysisReport(reportData) {
   const etl = reportData.etl_report || {}
   const ml = reportData.ml_results || {}
@@ -649,10 +637,10 @@ function printAnalysisReport(reportData) {
     `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td>${p.risk_label}</td><td>${p.risk_score}</td><td>${(p.confidence * 100).toFixed(0)}%</td><td>${p.triggered_rules?.join(', ') || 'None'}</td></tr>`
   ).join('') || ''
 
-  // Feature importance rows for print
   const anomalyRows = results.anomaly_detection?.predictions?.map((p, i) =>
     `<tr><td>${p.patient_name || `Patient ${i + 1}`}</td><td style="color:${p.is_anomaly ? '#dc2626' : '#16a34a'};font-weight:600">${p.status}</td><td>${p.anomaly_score != null ? (p.anomaly_score * 100).toFixed(0) + '%' : '—'}</td></tr>`
   ).join('') || ''
+
   const fi = results.diagnosis_tree?.model_info?.feature_importances
   const FEATURE_LABELS = {
     age: 'Age', bmi: 'BMI', glucose_level: 'Glucose',
@@ -716,7 +704,6 @@ function printAnalysisReport(reportData) {
   win.onload = () => { win.focus(); win.print() }
 }
 
-// ── Report Detail Modal ───────────────────────────────────────────────────────
 function ReportModal({ reportId, onClose }) {
   const [report, setReport] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -737,16 +724,16 @@ function ReportModal({ reportId, onClose }) {
       overflowY: 'auto', padding: '40px 24px',
     }} onClick={onClose}>
       <div style={{
-        background: '#161b27', borderRadius: 12, width: '100%', maxWidth: 860,
-        border: '1px solid #2a3347', padding: 24,
+        background: 'var(--bg-surface)', borderRadius: 12, width: '100%', maxWidth: 860,
+        border: '1px solid var(--border)', padding: 24,
       }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
               {loading ? 'Loading...' : report?.file_name}
             </div>
             {report && (
-              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
                 {new Date(report.created_at).toLocaleString()} · {report.notes}
               </div>
             )}
@@ -766,17 +753,17 @@ function ReportModal({ reportId, onClose }) {
                 <FileText size={13} /> Print Report
               </button>
             )}
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 4 }}>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
               <X size={20} />
             </button>
           </div>
         </div>
-        {loading && <div style={{ color: '#64748b', fontSize: 13 }}>Loading report...</div>}
+        {loading && <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading report...</div>}
         {error && <div style={{ color: '#ef4444', fontSize: 13 }}>{error}</div>}
         {report && (
           <>
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 12 }}>ETL Pipeline</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>ETL Pipeline</div>
               <ETLReportDetail etl={report.etl_report} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
@@ -784,7 +771,7 @@ function ReportModal({ reportId, onClose }) {
               <StatMini label="Linked Patients" value={report.linked_patients} color="#10b981" />
               <StatMini label="Unlinked Rows"   value={report.unlinked_rows}   color="#f59e0b" />
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 12 }}>ML Results</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 12 }}>ML Results</div>
             <MLResults mlResults={report.ml_results} />
           </>
         )}
@@ -793,7 +780,6 @@ function ReportModal({ reportId, onClose }) {
   )
 }
 
-// ── Manual Patient Form ───────────────────────────────────────────────────────
 const EMPTY_FORM = {
   first_name: '', last_name: '', date_of_birth: '', gender: 'M',
   email: '', phone: '',
@@ -806,16 +792,16 @@ function Field({ label, name, value, type = 'text', options, onChange, onBlur, e
   const hasErr = !!error
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, color: hasErr ? '#f87171' : '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+      <label style={{ fontSize: 11, color: hasErr ? '#f87171' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
         {label}{required && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}
       </label>
       {options ? (
         <select
           name={name} value={value} onChange={onChange} onBlur={onBlur}
           style={{
-            padding: '8px 10px', background: '#0f1117',
-            border: `1px solid ${hasErr ? '#ef4444' : '#2a3347'}`,
-            borderRadius: 6, color: '#e2e8f0', fontSize: 13,
+            padding: '8px 10px', background: 'var(--bg-base)',
+            border: `1px solid ${hasErr ? '#ef4444' : 'var(--border)'}`,
+            borderRadius: 6, color: 'var(--text-primary)', fontSize: 13,
             outline: 'none', fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
@@ -825,9 +811,9 @@ function Field({ label, name, value, type = 'text', options, onChange, onBlur, e
         <input
           type={type} name={name} value={value} onChange={onChange} onBlur={onBlur}
           style={{
-            padding: '8px 10px', background: '#0f1117',
-            border: `1px solid ${hasErr ? '#ef4444' : '#2a3347'}`,
-            borderRadius: 6, color: '#e2e8f0', fontSize: 13,
+            padding: '8px 10px', background: 'var(--bg-base)',
+            border: `1px solid ${hasErr ? '#ef4444' : 'var(--border)'}`,
+            borderRadius: 6, color: 'var(--text-primary)', fontSize: 13,
             outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box', width: '100%',
           }}
         />
@@ -967,7 +953,7 @@ function ManualPatientForm({ onSuccess }) {
 
   const sectionLabel = (text) => (
     <div style={{
-      fontSize: 11, fontWeight: 600, color: '#475569',
+      fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
       textTransform: 'uppercase', letterSpacing: '0.5px',
       marginTop: 20, marginBottom: 10,
     }}>{text}</div>
@@ -1011,7 +997,7 @@ function ManualPatientForm({ onSuccess }) {
           { label: 'Diabetic', name: 'is_diabetic' },
           { label: 'Hypertension', name: 'has_hypertension' },
         ].map(({ label, name }) => (
-          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#94a3b8' }}>
+          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
             <input
               type="checkbox" name={name} checked={form[name]} onChange={handleChange}
               style={{ width: 15, height: 15, accentColor: '#3b82f6', cursor: 'pointer' }}
@@ -1023,7 +1009,7 @@ function ManualPatientForm({ onSuccess }) {
 
       {serverError && (
         <div style={{
-          marginTop: 16, padding: '10px 14px', background: '#7f1d1d',
+          marginTop: 16, padding: '10px 14px', background: '#450a0a',
           borderRadius: 8, color: '#fca5a5', fontSize: 13,
         }}>{serverError}</div>
       )}
@@ -1033,8 +1019,8 @@ function ManualPatientForm({ onSuccess }) {
           onClick={handleSubmit} disabled={saving}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '10px 20px', background: saving ? '#1e2535' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-            border: 'none', borderRadius: 8, color: saving ? '#475569' : 'white',
+            padding: '10px 20px', background: saving ? 'var(--bg-surface-alt)' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+            border: 'none', borderRadius: 8, color: saving ? 'var(--text-muted)' : 'white',
             fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer',
             fontFamily: 'inherit', transition: 'all 0.2s',
           }}
@@ -1046,8 +1032,8 @@ function ManualPatientForm({ onSuccess }) {
           onClick={() => { setForm(EMPTY_FORM); setErrors({}); setTouched({}); setServerError(null); setSuccess(null) }}
           style={{
             padding: '10px 20px', background: 'transparent',
-            border: '1px solid #2a3347', borderRadius: 8,
-            color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+            border: '1px solid var(--border)', borderRadius: 8,
+            color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
           }}
         >Reset</button>
       </div>
@@ -1055,7 +1041,6 @@ function ManualPatientForm({ onSuccess }) {
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 const ALLOWED_EXTENSIONS = ['.csv', '.xlsx', '.xls']
 const MAX_FILE_SIZE_MB = 10
 
@@ -1137,7 +1122,7 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
   const tabStyle = (active) => ({
     padding: '9px 20px', borderRadius: 7, border: 'none',
     background: active ? 'rgba(59,130,246,0.12)' : 'transparent',
-    color: active ? '#3b82f6' : '#64748b',
+    color: active ? '#3b82f6' : 'var(--text-muted)',
     fontSize: 13, fontWeight: active ? 600 : 400,
     cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
   })
@@ -1145,14 +1130,13 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
   return (
     <div className="animate-fade-in">
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Add Patients</h1>
-        <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Upload a CSV dataset or manually enter a patient</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Add Patients</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Upload a CSV dataset or manually enter a patient</p>
       </div>
 
-      {/* Tabs */}
       <div style={{
         display: 'flex', gap: 4, marginBottom: 20,
-        background: '#161b27', border: '1px solid #2a3347',
+        background: 'var(--bg-surface)', border: '1px solid var(--border)',
         borderRadius: 9, padding: 4, width: 'fit-content',
       }}>
         <button style={tabStyle(tab === 'csv')}    onClick={() => setTab('csv')}>CSV Upload</button>
@@ -1166,7 +1150,7 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
               onDrop={handleDrop}
               onDragOver={e => e.preventDefault()}
               style={{
-                border: `2px dashed ${file ? '#3b82f6' : '#2a3347'}`,
+                border: `2px dashed ${file ? '#3b82f6' : 'var(--border)'}`,
                 borderRadius: 10, padding: '40px 24px', textAlign: 'center',
                 cursor: 'pointer', background: file ? 'rgba(59,130,246,0.04)' : 'transparent',
                 transition: 'all 0.2s',
@@ -1177,18 +1161,18 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
               {file ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                   <FileText size={20} color="#3b82f6" />
-                  <span style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 500 }}>{file.name}</span>
-                  <span style={{ fontSize: 12, color: '#64748b' }}>({(file.size / 1024).toFixed(1)} KB)</span>
+                  <span style={{ fontSize: 14, color: 'var(--text-primary)', fontWeight: 500 }}>{file.name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>({(file.size / 1024).toFixed(1)} KB)</span>
                   <button onClick={e => { e.stopPropagation(); clearFile() }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0 }}>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}>
                     <X size={16} />
                   </button>
                 </div>
               ) : (
                 <div>
-                  <Upload size={28} color="#64748b" style={{ margin: '0 auto 12px' }} />
-                  <div style={{ fontSize: 14, color: '#94a3b8', fontWeight: 500 }}>Drop your CSV or Excel file here</div>
-                  <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>or click to browse · .csv, .xlsx, .xls · max {MAX_FILE_SIZE_MB} MB</div>
+                  <Upload size={28} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+                  <div style={{ fontSize: 14, color: 'var(--text-secondary)', fontWeight: 500 }}>Drop your CSV or Excel file here</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>or click to browse · .csv, .xlsx, .xls · max {MAX_FILE_SIZE_MB} MB</div>
                 </div>
               )}
             </div>
@@ -1198,9 +1182,9 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
               disabled={!file || loading}
               style={{
                 marginTop: 16, width: '100%', padding: '11px',
-                background: !file || loading ? '#1e2535' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+                background: !file || loading ? 'var(--bg-surface-alt)' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
                 border: 'none', borderRadius: 8,
-                color: !file || loading ? '#475569' : 'white',
+                color: !file || loading ? 'var(--text-muted)' : 'white',
                 fontSize: 13, fontWeight: 600,
                 cursor: !file || loading ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', transition: 'all 0.2s',
@@ -1210,7 +1194,7 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
             </button>
 
             {loading && (
-              <div style={{ marginTop: 10, background: '#1e2535', borderRadius: 4, height: 4 }}>
+              <div style={{ marginTop: 10, background: 'var(--border)', borderRadius: 4, height: 4 }}>
                 <div style={{
                   height: 4, borderRadius: 4, width: `${progress}%`,
                   background: 'linear-gradient(90deg, #3b82f6, #06b6d4)', transition: 'width 0.3s',
@@ -1222,7 +1206,7 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
           {error && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10,
-              background: '#7f1d1d', border: '1px solid #ef4444',
+              background: '#450a0a', border: '1px solid #ef4444',
               borderRadius: 8, padding: '12px 16px', marginBottom: 16,
             }}>
               <AlertCircle size={16} color="#ef4444" />
@@ -1253,44 +1237,43 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
             </div>
           )}
 
-          {/* Past Reports */}
           <div className="card" style={{ padding: 24, marginTop: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0', marginBottom: 16 }}>Saved Analysis Reports</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 16 }}>Saved Analysis Reports</div>
             {reportsLoading ? (
-              <div style={{ color: '#64748b', fontSize: 13 }}>Loading reports...</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading reports...</div>
             ) : reports.length === 0 ? (
-              <div style={{ color: '#64748b', fontSize: 13 }}>No reports saved yet</div>
+              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No reports saved yet</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #2a3347' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     {['#', 'File', 'Status', 'Rows', 'Linked', 'Date', ''].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {reports.map(r => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid #1e2535' }}>
-                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569' }}>#{r.id}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0' }}>{r.file_name}</td>
+                    <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)' }}>#{r.id}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)' }}>{r.file_name}</td>
                       <td style={{ padding: '8px 12px' }}>
                         <span style={{
                           fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                          background: r.status === 'completed' ? '#064e3b' : '#78350f',
-                          color: r.status === 'completed' ? '#6ee7b7' : '#fcd34d',
+                          background: r.status === 'completed' ? 'var(--risk-low-bg)' : 'var(--risk-med-bg)',
+                          color: r.status === 'completed' ? 'var(--risk-low-text)' : 'var(--risk-med-text)',
                         }}>{r.status}</span>
                       </td>
-                      <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{r.total_rows}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{r.total_rows}</td>
                       <td style={{ padding: '8px 12px', fontSize: 13, color: '#10b981' }}>{r.linked_patients}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569' }}>{new Date(r.created_at).toLocaleString()}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)' }}>{new Date(r.created_at).toLocaleString()}</td>
                       <td style={{ padding: '8px 12px' }}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button
                             onClick={() => setOpenReportId(r.id)}
                             style={{
-                              background: 'none', border: '1px solid #2a3347', borderRadius: 6,
-                              padding: '4px 10px', color: '#64748b', cursor: 'pointer', fontSize: 12,
+                              background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+                              padding: '4px 10px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 12,
                               display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'inherit',
                             }}
                           >
@@ -1334,14 +1317,14 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
           alignItems: 'center', justifyContent: 'center',
         }} onClick={() => setDeletingReportId(null)}>
           <div style={{
-            background: '#161b27', borderRadius: 12, padding: 28,
-            border: '1px solid #2a3347', maxWidth: 400, width: '90%',
+            background: 'var(--bg-surface)', borderRadius: 12, padding: 28,
+            border: '1px solid var(--border)', maxWidth: 400, width: '90%',
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 20 }}>
               <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 600, color: '#fca5a5', marginBottom: 6 }}>Delete this report?</div>
-                <div style={{ fontSize: 13, color: '#94a3b8' }}>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                   The report log will be removed. Patient analysis results are kept in their medical history.
                 </div>
               </div>
@@ -1351,8 +1334,8 @@ export default function UploadPage({ uploadResult, setUploadResult }) {
                 onClick={() => setDeletingReportId(null)}
                 style={{
                   padding: '8px 16px', background: 'transparent',
-                  border: '1px solid #2a3347', borderRadius: 7,
-                  color: '#94a3b8', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
+                  border: '1px solid var(--border)', borderRadius: 7,
+                  color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
                 }}
               >Cancel</button>
               <button

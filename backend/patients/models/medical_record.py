@@ -17,7 +17,6 @@ class MedicalRecord(BaseHealthEntity):
     diagnosis = models.TextField(blank=True)
     notes = models.TextField(blank=True)
 
-    # Vitals recorded at this visit
     blood_pressure_systolic = models.FloatField(null=True, blank=True)
     blood_pressure_diastolic = models.FloatField(null=True, blank=True)
     heart_rate = models.FloatField(null=True, blank=True)

@@ -1,6 +1,6 @@
 import client from './client'
 
-// ── Auth ────────────────────────────────────────────────────────────────
+
 export const login = (username, password) =>
   client.post('/auth/login/', { username, password })
 
@@ -12,10 +12,10 @@ export const getMe = () => client.get('/auth/me/')
 export const changePassword = (current_password, new_password, confirm_password) =>
   client.post('/auth/change-password/', { current_password, new_password, confirm_password })
 
-// ── Dashboard ───────────────────────────────────────────────────────────
+
 export const getDashboardSummary = (days) => client.get('/dashboard/', { params: days ? { days } : {} })
 
-// ── Patients ────────────────────────────────────────────────────────────
+
 export const getPatients = (params = {}) => client.get('/patients/', { params })
 export const getAllPatients = (params = {}) =>
   client.get('/patients/', { params: { ...params, page_size: 10000 } })
@@ -24,14 +24,14 @@ export const createPatient = (data) => client.post('/patients/', data)
 export const updatePatient = (id, data) => client.put(`/patients/${id}/`, data)
 export const deletePatient = (id) => client.delete(`/patients/${id}/`)
 
-// ── Medical Records ─────────────────────────────────────────────────────
+
 export const getRecords = (params = {}) => client.get('/records/', { params })
 export const createRecord = (data) => client.post('/records/', data)
 
-// ── Analysis Results ────────────────────────────────────────────────────
+
 export const getAnalyses = (params = {}) => client.get('/analyses/', { params })
 
-// ── ETL Upload only ─────────────────────────────────────────────────────
+
 export const uploadDataset = (file, onProgress) => {
   const formData = new FormData()
   formData.append('file', file)
@@ -43,7 +43,7 @@ export const uploadDataset = (file, onProgress) => {
   })
 }
 
-// ── ETL + ML Analyse ────────────────────────────────────────────────────
+
 export const analyseDataset = (file, onProgress) => {
   const formData = new FormData()
   formData.append('file', file)
@@ -55,10 +55,10 @@ export const analyseDataset = (file, onProgress) => {
   })
 }
 
-// ── ML Predict ──────────────────────────────────────────────────────────
+
 export const predict = (rows) => client.post('/predict/', { rows })
 
-// ── Batch Reports ───────────────────────────────────────────────────────
+
 export const getReports = () => client.get('/reports/')
 export const getReport = (id) => client.get(`/reports/${id}/`)
 export const getReportDetail = (id) => client.get(`/reports/${id}/`)

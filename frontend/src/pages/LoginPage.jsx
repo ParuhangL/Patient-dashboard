@@ -23,20 +23,16 @@ export default function LoginPage({ onSuccess }) {
   const [loading, setLoading] = useState(false)
 
   const getError = (key) => (!touched[key] ? '' : RULES[key](form[key]))
-
   const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
-
   const handleChange = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }))
     if (serverError) setServerError('')
   }
-
   const isFormValid = () => Object.keys(RULES).every((key) => RULES[key](form[key]) === '')
 
   const handleSubmit = async () => {
     setTouched({ username: true, password: true })
     if (!isFormValid()) return
-
     setLoading(true)
     setServerError('')
     try {
@@ -58,14 +54,14 @@ export default function LoginPage({ onSuccess }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0f1117',
+      minHeight: '100vh', background: 'var(--bg-base)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        width: 400, background: '#161b27',
-        border: '1px solid #2a3347', borderRadius: 16, padding: 40,
+        width: 400, background: 'var(--bg-surface)',
+        border: '1px solid var(--border)', borderRadius: 16, padding: 40,
       }}>
-        {/* Logo */}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
@@ -75,14 +71,14 @@ export default function LoginPage({ onSuccess }) {
             <Activity size={20} color="white" />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>MediDash</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>Diagnostic AI Platform</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>MediDash</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Diagnostic AI Platform</div>
           </div>
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Sign in</h2>
-          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Enter your credentials to continue</p>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Sign in</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Enter your credentials to continue</p>
         </div>
 
         {serverError && (
@@ -95,9 +91,8 @@ export default function LoginPage({ onSuccess }) {
           </div>
         )}
 
-        {/* Username */}
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
             Username
           </label>
           <input
@@ -109,9 +104,9 @@ export default function LoginPage({ onSuccess }) {
             placeholder="Enter username"
             style={{
               width: '100%', padding: '10px 14px', borderRadius: 8,
-              background: '#0f1117',
-              border: `1px solid ${usernameError ? '#ef4444' : '#2a3347'}`,
-              color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+              background: 'var(--bg-base)',
+              border: `1px solid ${usernameError ? '#ef4444' : 'var(--border)'}`,
+              color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
             }}
           />
           {usernameError && (
@@ -119,9 +114,8 @@ export default function LoginPage({ onSuccess }) {
           )}
         </div>
 
-        {/* Password */}
         <div style={{ marginBottom: 24 }}>
-          <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 6 }}>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
             Password
           </label>
           <div style={{ position: 'relative' }}>
@@ -134,16 +128,16 @@ export default function LoginPage({ onSuccess }) {
               placeholder="Enter password"
               style={{
                 width: '100%', padding: '10px 40px 10px 14px', borderRadius: 8,
-                background: '#0f1117',
-                border: `1px solid ${passwordError ? '#ef4444' : '#2a3347'}`,
-                color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+                background: 'var(--bg-base)',
+                border: `1px solid ${passwordError ? '#ef4444' : 'var(--border)'}`,
+                color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
               }}
             />
             <button
               onClick={() => setShowPassword(!showPassword)}
               style={{
                 position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: 0,
+                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0,
               }}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -154,34 +148,32 @@ export default function LoginPage({ onSuccess }) {
           )}
         </div>
 
-        {/* Submit */}
         <button
           onClick={handleSubmit}
           disabled={loading}
           style={{
             width: '100%', padding: '11px', borderRadius: 8, border: 'none',
-            background: loading ? '#1e3a5f' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-            color: 'white', fontSize: 14, fontWeight: 600,
+            background: loading ? 'var(--bg-surface-alt)' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+            color: loading ? 'var(--text-muted)' : 'white', fontSize: 14, fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
           }}
         >
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
 
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#64748b' }}>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
           No account?{' '}
           <Link to="/register" style={{ color: '#3b82f6', textDecoration: 'none' }}>
             Create one
           </Link>
         </p>
 
-        {/* Admin link */}
-        <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid #1e2535' }}>
+        <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
           <Link
             to="/admin-panel/login"
-            style={{ fontSize: 11, color: '#334155', textDecoration: 'none' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#64748b'}
-            onMouseLeave={e => e.currentTarget.style.color = '#334155'}
+            style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'none' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-faint)'}
           >
             Staff access
           </Link>

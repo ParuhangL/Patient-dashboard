@@ -14,7 +14,30 @@ import ChangePasswordPage from './pages/ChangePasswordPage'
 import AdminLogin from './admin/AdminLogin'
 import AdminPage from './admin/AdminPage'
 
-// ─── Toast Context ────────────────────────────────────────────────────────────
+const ThemeContext = createContext(null)
+
+export function useTheme() {
+  return useContext(ThemeContext)
+}
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark')
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggle = useCallback(() => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark')
+  }, [])
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggle }}>
+      {children}
+    </ThemeContext.Provider>
+  )
+}
 
 const ToastContext = createContext(null)
 
@@ -155,8 +178,6 @@ function ToastProvider({ children }) {
   )
 }
 
-// ─── Routing ──────────────────────────────────────────────────────────────────
-
 const PAGE_MAP = {
   '/dashboard':        'dashboard',
   '/patients':         'patients',
@@ -243,7 +264,7 @@ function AppInner() {
   const PageComponent = PAGES[activePage] || DashboardPage
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0f1117' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-base)' }}>
       <Sidebar
         activePage={activePage}
         onNavigate={(id) => navigate(ROUTE_MAP[id])}
@@ -263,9 +284,11 @@ function AppInner() {
 export default function App() {
   return (
     <BrowserRouter>
-      <ToastProvider>
-        <AppInner />
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AppInner />
+        </ToastProvider>
+      </ThemeProvider>
     </BrowserRouter>
   )
 }

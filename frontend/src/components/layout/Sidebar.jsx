@@ -9,7 +9,10 @@ import {
   ChevronLeft,
   ChevronRight,
   KeyRound,
+  Sun,
+  Moon,
 } from 'lucide-react'
+import { useTheme } from '../../App'
 
 const NAV_ITEMS = [
   { id: 'dashboard',        label: 'Dashboard',       icon: LayoutDashboard },
@@ -21,13 +24,14 @@ const NAV_ITEMS = [
 
 export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
   const [collapsed, setCollapsed] = useState(false)
+  const { theme, toggle } = useTheme()
 
   return (
     <aside style={{
       width: collapsed ? 72 : 220,
       height: '100vh',
-      background: '#161b27',
-      borderRight: '1px solid #2a3347',
+      background: 'var(--bg-surface)',
+      borderRight: '1px solid var(--border)',
       display: 'flex',
       flexDirection: 'column',
       position: 'sticky',
@@ -35,10 +39,9 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
       transition: 'width 0.2s ease'
     }}>
 
-      {/* HEADER */}
       <div style={{
         padding: '20px 12px',
-        borderBottom: '1px solid #2a3347'
+        borderBottom: '1px solid var(--border)'
       }}>
         <div style={{
           display: 'flex',
@@ -60,10 +63,10 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
 
             {!collapsed && (
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
                   MediDash
                 </div>
-                <div style={{ fontSize: 10, color: '#64748b' }}>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
                   Diagnostic AI
                 </div>
               </div>
@@ -86,7 +89,6 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
         )}
       </div>
 
-      {/* NAV */}
       <nav style={{
         flex: 1,
         overflowY: 'auto',
@@ -111,7 +113,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
                 cursor: 'pointer',
                 marginBottom: 6,
                 background: active ? 'rgba(59,130,246,0.12)' : 'transparent',
-                color: active ? '#3b82f6' : '#94a3b8',
+                color: active ? '#3b82f6' : 'var(--text-secondary)',
                 fontSize: 13,
                 fontWeight: active ? 600 : 400,
                 transition: 'background 0.15s'
@@ -124,8 +126,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
         })}
       </nav>
 
-      {/* FOOTER */}
-      <div style={{ borderTop: '1px solid #2a3347', padding: '12px 8px' }}>
+      <div style={{ borderTop: '1px solid var(--border)', padding: '12px 8px' }}>
 
         {!collapsed && user && (
           <div style={{
@@ -157,7 +158,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
               <div style={{
                 fontSize: 12,
                 fontWeight: 600,
-                color: '#e2e8f0',
+                color: 'var(--text-primary)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
@@ -190,6 +191,38 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
         )}
 
         <button
+          title={collapsed ? (theme === 'dark' ? 'Light mode' : 'Dark mode') : ''}
+          onClick={toggle}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 10,
+            padding: '10px 12px',
+            borderRadius: 8,
+            border: 'none',
+            cursor: 'pointer',
+            background: 'transparent',
+            color: 'var(--text-muted)',
+            fontSize: 13,
+            marginBottom: 4,
+            transition: 'all 0.15s'
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'rgba(59,130,246,0.08)'
+            e.currentTarget.style.color = '#3b82f6'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = 'var(--text-muted)'
+          }}
+        >
+          {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          {!collapsed && (theme === 'dark' ? 'Light mode' : 'Dark mode')}
+        </button>
+
+        <button
           title={collapsed ? 'Sign out' : ''}
           onClick={onLogout}
           style={{
@@ -203,7 +236,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
             border: 'none',
             cursor: 'pointer',
             background: 'transparent',
-            color: '#64748b',
+            color: 'var(--text-muted)',
             fontSize: 13,
             transition: 'all 0.15s'
           }}
@@ -213,7 +246,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = '#64748b'
+            e.currentTarget.style.color = 'var(--text-muted)'
           }}
         >
           <LogOut size={16} />
@@ -221,7 +254,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
         </button>
 
         {!collapsed && (
-          <div style={{ fontSize: 11, color: '#334155', marginTop: 8, paddingLeft: 12 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 8, paddingLeft: 12 }}>
             v1.0.0 · DRF Backend
           </div>
         )}
@@ -234,7 +267,7 @@ export default function Sidebar({ activePage, onNavigate, onLogout, user }) {
 const toggleBtnStyle = {
   border: 'none',
   background: 'transparent',
-  color: '#94a3b8',
+  color: 'var(--text-secondary)',
   cursor: 'pointer',
   padding: 6,
   borderRadius: 6

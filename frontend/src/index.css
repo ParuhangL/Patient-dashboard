@@ -1,25 +1,77 @@
 @import "tailwindcss";
 
+
+[data-theme="dark"] {
+  --bg-base:        #0f1117;
+  --bg-surface:     #161b27;
+  --bg-surface-alt: #1e2535;
+  --border:         #2a3347;
+  --text-primary:   #e2e8f0;
+  --text-secondary: #475569;
+  --text-muted:     #64748b;
+  --text-faint:     #334155;
+  --scrollbar-track: #161b27;
+  --scrollbar-thumb: #2a3347;
+  --risk-low-bg:    #052e16;
+  --risk-low-text:  #6ee7b7;
+  --risk-med-bg:    #431407;
+  --risk-med-text:  #fcd34d;
+  --risk-high-bg:   #450a0a;
+  --risk-high-text: #fca5a5;
+  --status-active-bg:   #052e16;
+  --status-active-text: #10b981;
+  --status-inactive-bg:   #1a2030;
+  --status-inactive-text: #334155;
+}
+
+[data-theme="light"] {
+  --bg-base:        #f1f5f9;
+  --bg-surface:     #ffffff;
+  --bg-surface-alt: #f8fafc;
+  --border:         #e2e8f0;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #64748b;
+  --text-faint:     #cbd5e1;
+  --scrollbar-track: #e2e8f0;
+  --scrollbar-thumb: #cbd5e1;
+  --risk-low-bg:    #dcfce7;
+  --risk-low-text:  #15803d;
+  --risk-med-bg:    #fef9c3;
+  --risk-med-text:  #a16207;
+  --risk-high-bg:   #fee2e2;
+  --risk-high-text: #dc2626;
+  --status-active-bg:   #dcfce7;
+  --status-active-text: #15803d;
+  --status-inactive-bg:   #f1f5f9;
+  --status-inactive-text: #94a3b8;
+}
+
+
 * { box-sizing: border-box; }
 
 body {
-  background-color: #0f1117;
-  color: #e2e8f0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: 'DM Sans', sans-serif;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
 }
 
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #161b27; }
-::-webkit-scrollbar-thumb { background: #2a3347; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
 
-.card { background: #161b27; border: 1px solid #2a3347; border-radius: 12px; }
+
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; }
+
 .badge-low    { background: #064e3b; color: #6ee7b7; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
 .badge-medium { background: #78350f; color: #fcd34d; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
 .badge-high   { background: #7f1d1d; color: #fca5a5; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; }
+
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
@@ -27,7 +79,7 @@ body {
 }
 .animate-fade-in { animation: fadeIn 0.3s ease forwards; }
 
-/* ── PDF / Print styles ─────────────────────────────── */
+
 @media print {
   body * { visibility: hidden; }
   #patient-print-report,

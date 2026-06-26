@@ -15,8 +15,9 @@ function RiskBadge({ risk }) {
   if (risk === 'NORMAL') return (
     <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}>NORMAL</span>
   )
-  const cls = risk === 'HIGH' ? 'badge-high' : risk === 'MEDIUM' ? 'badge-medium' : 'badge-low'
-  return <span className={cls}>{risk}</span>
+  const bgVar   = risk === 'LOW' ? 'var(--risk-low-bg)'   : risk === 'MEDIUM' ? 'var(--risk-med-bg)'   : 'var(--risk-high-bg)'
+  const textVar = risk === 'LOW' ? 'var(--risk-low-text)' : risk === 'MEDIUM' ? 'var(--risk-med-text)' : 'var(--risk-high-text)'
+  return <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: bgVar, color: textVar }}>{risk}</span>
 }
 
 const MODEL_LABELS = {
@@ -38,17 +39,17 @@ const MODEL_COLORS = {
 }
 
 function ResultDetail({ result, modelType }) {
-  if (!result || typeof result !== 'object') return <span style={{ color: '#475569' }}>—</span>
+  if (!result || typeof result !== 'object') return <span style={{ color: 'var(--text-secondary)' }}>—</span>
 
   if (modelType === 'logistic') {
     return (
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <span style={{
           fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-          background: result.prediction === 'Diabetic' ? '#7f1d1d' : '#064e3b',
-          color: result.prediction === 'Diabetic' ? '#fca5a5' : '#6ee7b7',
+          background: result.prediction === 'Diabetic' ? 'var(--risk-high-bg)' : 'var(--risk-low-bg)',
+          color: result.prediction === 'Diabetic' ? 'var(--risk-high-text)' : 'var(--risk-low-text)',
         }}>{result.prediction}</span>
-        <span style={{ fontSize: 12, color: '#64748b' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           Diabetic: {result.probability_diabetic != null ? `${(result.probability_diabetic * 100).toFixed(1)}%` : '—'}
         </span>
       </div>
@@ -59,8 +60,8 @@ function ResultDetail({ result, modelType }) {
     return (
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         {result.probabilities && Object.entries(result.probabilities).map(([k, v]) => (
-          <span key={k} style={{ fontSize: 11, color: '#64748b' }}>
-            {k}: <span style={{ color: '#94a3b8' }}>{(v * 100).toFixed(0)}%</span>
+          <span key={k} style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            {k}: <span style={{ color: 'var(--text-secondary)' }}>{(v * 100).toFixed(0)}%</span>
           </span>
         ))}
       </div>
@@ -72,14 +73,14 @@ function ResultDetail({ result, modelType }) {
     const dbp = result.predicted_diastolic_bp
     return (
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: '#94a3b8' }}>
-          Systolic: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+          Systolic: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
             {sbp != null ? `${sbp} mmHg` : '—'}
           </span>
         </span>
         {dbp != null && (
-          <span style={{ fontSize: 12, color: '#94a3b8' }}>
-            Diastolic: <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{`${dbp} mmHg`}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+            Diastolic: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{`${dbp} mmHg`}</span>
           </span>
         )}
       </div>
@@ -87,12 +88,10 @@ function ResultDetail({ result, modelType }) {
   }
 
   if (modelType === 'kmeans') {
+    const bg   = result.profile === 'High Risk' ? 'var(--risk-high-bg)' : result.profile === 'Moderate Risk' ? 'var(--risk-med-bg)' : 'var(--risk-low-bg)'
+    const text = result.profile === 'High Risk' ? 'var(--risk-high-text)' : result.profile === 'Moderate Risk' ? 'var(--risk-med-text)' : 'var(--risk-low-text)'
     return (
-      <span style={{
-        fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-        background: result.profile === 'High Risk' ? '#7f1d1d' : result.profile === 'Moderate Risk' ? '#78350f' : '#064e3b',
-        color: result.profile === 'High Risk' ? '#fca5a5' : result.profile === 'Moderate Risk' ? '#fcd34d' : '#6ee7b7',
-      }}>
+      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: bg, color: text }}>
         {result.profile || `Cluster ${result.cluster_id}`}
       </span>
     )
@@ -109,14 +108,14 @@ function ResultDetail({ result, modelType }) {
         }}>
           {result.status}
         </span>
-        <span style={{ fontSize: 12, color: '#64748b' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
           Score: {result.anomaly_score != null ? `${(result.anomaly_score * 100).toFixed(0)}%` : '—'}
         </span>
       </div>
     )
   }
 
-  return <span style={{ fontSize: 12, color: '#64748b' }}>{JSON.stringify(result).slice(0, 60)}...</span>
+  return <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{JSON.stringify(result).slice(0, 60)}...</span>
 }
 
 const RISK_COLORS = { LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444' }
@@ -127,7 +126,7 @@ function RiskPieChart({ analyses, height = 200 }) {
   const data = Object.entries(counts).filter(([, v]) => v > 0).map(([name, value]) => ({ name, value }))
 
   if (data.length === 0) return (
-    <div style={{ color: '#64748b', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No risk label data yet</div>
+    <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No risk label data yet</div>
   )
 
   return (
@@ -136,7 +135,7 @@ function RiskPieChart({ analyses, height = 200 }) {
         <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={72} label={false} labelLine={false}>
           {data.map(entry => <Cell key={entry.name} fill={RISK_COLORS[entry.name]} />)}
         </Pie>
-        <Tooltip contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }} />
+        <Tooltip contentStyle={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 8 }} />
       </PieChart>
     </ResponsiveContainer>
   )
@@ -158,17 +157,17 @@ function ConfidenceBarChart({ analyses, modelCounts, height = 200 }) {
   }))
 
   if (data.length === 0) return (
-    <div style={{ color: '#64748b', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No confidence data yet</div>
+    <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No confidence data yet</div>
   )
 
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} />
-        <YAxis tick={{ fill: '#64748b', fontSize: 11 }} unit="%" domain={[0, 100]} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+        <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit="%" domain={[0, 100]} />
         <Tooltip
-          contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
+          contentStyle={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 8 }}
           formatter={(v) => [`${v}%`, 'Avg Confidence']}
         />
         <Bar dataKey="avg_confidence" radius={[4, 4, 0, 0]}>
@@ -201,7 +200,7 @@ function RiskScatterChart({ analyses, height = 200 }) {
     })
 
   if (data.length === 0) return (
-    <div style={{ color: '#64748b', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No scatter data yet</div>
+    <div style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', padding: '40px 0' }}>No scatter data yet</div>
   )
 
   return (
@@ -210,19 +209,19 @@ function RiskScatterChart({ analyses, height = 200 }) {
         {Object.entries(MODEL_SCATTER_COLORS).map(([model, color]) => (
           <div key={model} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: color }} />
-            <span style={{ fontSize: 11, color: '#94a3b8' }}>{MODEL_LABELS[model]}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{MODEL_LABELS[model]}</span>
           </div>
         ))}
       </div>
       <ResponsiveContainer width="100%" height={height}>
         <ScatterChart margin={{ top: 4, right: 8, left: 20, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2a3347" />
-          <XAxis dataKey="confidence" name="Confidence" tick={{ fill: '#94a3b8', fontSize: 11 }} type="number" domain={[0, 100]} tickCount={6} tickFormatter={v => `${v}%`} />
-          <YAxis dataKey="risk" name="Risk" tick={{ fill: '#94a3b8', fontSize: 11 }} tickFormatter={v => ['', 'Non-Diabetic', 'MED', 'Diabetic'][v] || ''} domain={[0, 4]} ticks={[1, 2, 3]} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+          <XAxis dataKey="confidence" name="Confidence" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} type="number" domain={[0, 100]} tickCount={6} tickFormatter={v => `${v}%`} />
+          <YAxis dataKey="risk" name="Risk" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={v => ['', 'Non-Diabetic', 'MED', 'Diabetic'][v] || ''} domain={[0, 4]} ticks={[1, 2, 3]} />
           <ZAxis range={[40, 40]} />
           <Tooltip
             cursor={{ strokeDasharray: '3 3' }}
-            contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 8 }}
+            contentStyle={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 8 }}
             formatter={(v, name) => {
               if (name === 'Risk') return [['', 'Non-Diabetic', 'Medium Risk', 'Diabetic'][Math.round(v)] || Math.round(v), 'Risk']
               if (name === 'Confidence') return [`${Number(v).toFixed(1)}%`, 'Confidence']
@@ -241,8 +240,6 @@ function RiskScatterChart({ analyses, height = 200 }) {
     </>
   )
 }
-
-// ── Confusion Matrix components ───────────────────────────────────────────────
 
 function BinaryConfusionMatrix({ cm, label, color }) {
   if (!cm) return null
@@ -264,22 +261,22 @@ function BinaryConfusionMatrix({ cm, label, color }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: color }} />
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>{label}</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>Binary · Test set · {total} samples</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Binary · Test set · {total} samples</div>
         </div>
       </div>
       <div style={{ display: 'flex', marginBottom: 4 }}>
         <div style={{ width: 90 }} />
-        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predicted: Non-Diabetic</div>
-        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predicted: Diabetic</div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predicted: Non-Diabetic</div>
+        <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Predicted: Diabetic</div>
       </div>
       <div style={{ display: 'flex', gap: 0 }}>
         <div style={{ width: 90, display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10 }}>
-            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actual: Non-Diabetic</span>
+            <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actual: Non-Diabetic</span>
           </div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10 }}>
-            <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actual: Diabetic</span>
+            <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Actual: Diabetic</span>
           </div>
         </div>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -287,20 +284,20 @@ function BinaryConfusionMatrix({ cm, label, color }) {
             <div key={c.label} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 8, padding: '16px 12px', textAlign: 'center' }}>
               <div style={{ fontSize: 24, fontWeight: 700, color: c.textColor, lineHeight: 1 }}>{c.value}</div>
               <div style={{ fontSize: 11, fontWeight: 600, color: c.textColor, marginTop: 4 }}>{c.label}</div>
-              <div style={{ fontSize: 10, color: '#475569', marginTop: 2 }}>{c.desc}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{c.desc}</div>
             </div>
           ))}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 0, marginTop: 16, background: '#0f1117', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2535' }}>
+      <div style={{ display: 'flex', gap: 0, marginTop: 16, background: 'var(--bg-base)', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
         {[
           { label: 'Accuracy',  value: `${accuracy}%`  },
           { label: 'Precision', value: `${precision}%` },
           { label: 'Recall',    value: `${recall}%`    },
         ].map((m, i) => (
-          <div key={m.label} style={{ flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>{m.value}</div>
-            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{m.label}</div>
+          <div key={m.label} style={{ flex: 1, padding: '10px 12px', textAlign: 'center', borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{m.value}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>{m.label}</div>
           </div>
         ))}
       </div>
@@ -323,9 +320,9 @@ function MulticlassConfusionMatrix({ cm, label, color }) {
     }
     const intensity = value / maxVal
     return {
-      bg:     intensity > 0 ? `rgba(239,68,68,${0.05 + intensity * 0.25})` : '#0f1117',
-      border: intensity > 0 ? `rgba(239,68,68,${0.15 + intensity * 0.3})` : '#1e2535',
-      text:   intensity > 0 ? '#f87171' : '#334155',
+      bg:     intensity > 0 ? `rgba(239,68,68,${0.05 + intensity * 0.25})` : 'var(--bg-base)',
+      border: intensity > 0 ? `rgba(239,68,68,${0.15 + intensity * 0.3})` : 'var(--border)',
+      text:   intensity > 0 ? '#f87171' : 'var(--text-faint)',
     }
   }
 
@@ -334,21 +331,21 @@ function MulticlassConfusionMatrix({ cm, label, color }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: color }} />
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>{label}</div>
-          <div style={{ fontSize: 11, color: '#64748b' }}>3-class · Test set · {total} samples · Diagonal = correct</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{label}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>3-class · Test set · {total} samples · Diagonal = correct</div>
         </div>
       </div>
       <div style={{ display: 'flex', marginBottom: 6 }}>
         <div style={{ width: 80 }} />
         {labels.map(l => (
-          <div key={l} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <div key={l} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Pred: {l}
           </div>
         ))}
       </div>
       {matrix.map((row, i) => (
         <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
-          <div style={{ width: 80, fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', paddingRight: 10 }}>
+          <div style={{ width: 80, fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', paddingRight: 10 }}>
             Act: {labels[i]}
           </div>
           {row.map((val, j) => {
@@ -361,15 +358,13 @@ function MulticlassConfusionMatrix({ cm, label, color }) {
           })}
         </div>
       ))}
-      <div style={{ marginTop: 16, background: '#0f1117', borderRadius: 8, border: '1px solid #1e2535', padding: '10px 16px', textAlign: 'center' }}>
-        <span style={{ fontSize: 15, fontWeight: 600, color: '#e2e8f0' }}>{accuracy}%</span>
-        <span style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8 }}>Test Accuracy</span>
+      <div style={{ marginTop: 16, background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 16px', textAlign: 'center' }}>
+        <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{accuracy}%</span>
+        <span style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginLeft: 8 }}>Test Accuracy</span>
       </div>
     </div>
   )
 }
-
-// ── Anomaly Detection Card ────────────────────────────────────────────────────
 
 function AnomalyCard({ analyses }) {
   const anomalyResults = analyses.filter(a => a.model_type === 'isolation_forest')
@@ -379,38 +374,28 @@ function AnomalyCard({ analyses }) {
   const normal  = anomalyResults.filter(a => a.risk_label === 'NORMAL')
 
   return (
-    <div className="card" style={{ padding: 24, marginBottom: 20, borderColor: flagged.length > 0 ? 'rgba(239,68,68,0.3)' : '#2a3347' }}>
-      {/* Header */}
+    <div className="card" style={{ padding: 24, marginBottom: 20, borderColor: flagged.length > 0 ? 'rgba(239,68,68,0.3)' : 'var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
         <div style={{ width: 3, height: 18, borderRadius: 2, background: '#ef4444' }} />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>Anomaly Detection — Isolation Forest</div>
-          <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Anomaly Detection — Isolation Forest</div>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>
             Patients whose vitals are statistically unusual compared to the population
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <span style={{
-            fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4,
-            background: 'rgba(239,68,68,0.15)', color: '#f87171',
-            border: '1px solid rgba(239,68,68,0.3)',
-          }}>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 4, background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
             {flagged.length} flagged
           </span>
-          <span style={{
-            fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 4,
-            background: 'rgba(16,185,129,0.1)', color: '#10b981',
-            border: '1px solid rgba(16,185,129,0.25)',
-          }}>
+          <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 4, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.25)' }}>
             {normal.length} normal
           </span>
         </div>
       </div>
 
-      {/* Stat strip */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
-        background: '#0f1117', border: '1px solid #1e2535',
+        background: 'var(--bg-base)', border: '1px solid var(--border)',
         borderRadius: 8, overflow: 'hidden', marginBottom: 16,
       }}>
         {[
@@ -418,36 +403,35 @@ function AnomalyCard({ analyses }) {
           { label: 'Anomalies',      value: flagged.length,        color: '#ef4444' },
           { label: 'Anomaly Rate',   value: anomalyResults.length > 0 ? `${((flagged.length / anomalyResults.length) * 100).toFixed(1)}%` : '—', color: '#f59e0b' },
         ].map((s, i) => (
-          <div key={s.label} style={{ padding: '12px 16px', borderRight: i < 2 ? '1px solid #1e2535' : 'none' }}>
-            <div style={{ fontSize: 10, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{s.label}</div>
+          <div key={s.label} style={{ padding: '12px 16px', borderRight: i < 2 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>{s.label}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Flagged patients table — only show if any flagged */}
       {flagged.length > 0 ? (
         <>
-          <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
             Flagged Patients
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #2a3347' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Patient', 'Anomaly Score', 'Date'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{h}</th>
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {flagged.map((a, i) => (
-                <tr key={a.id} style={{ borderBottom: '1px solid #1e2535', background: 'rgba(239,68,68,0.03)' }}>
-                  <td style={{ padding: '8px 12px', fontSize: 13, color: '#e2e8f0', fontWeight: 500 }}>
-                    {a.patient_name || <span style={{ color: '#475569' }}>Unknown</span>}
+              {flagged.map(a => (
+                <tr key={a.id} style={{ borderBottom: '1px solid var(--border)', background: 'rgba(239,68,68,0.03)' }}>
+                  <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
+                    {a.patient_name || <span style={{ color: 'var(--text-secondary)' }}>Unknown</span>}
                   </td>
                   <td style={{ padding: '8px 12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 100, background: '#1e2535', borderRadius: 4, height: 6 }}>
+                      <div style={{ width: 100, background: 'var(--border)', borderRadius: 4, height: 6 }}>
                         <div style={{
                           height: 6, borderRadius: 4,
                           width: `${(a.confidence ?? 0) * 100}%`,
@@ -459,7 +443,7 @@ function AnomalyCard({ analyses }) {
                       </span>
                     </div>
                   </td>
-                  <td style={{ padding: '8px 12px', fontSize: 12, color: '#475569' }}>
+                  <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
                     {new Date(a.created_at).toLocaleDateString()}
                   </td>
                 </tr>
@@ -572,43 +556,40 @@ export default function AnalysisPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>ML Analysis</h1>
-        <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>ML Analysis</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
           All analysis results across all patients and models
         </p>
       </div>
 
-      {/* Stat strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, marginBottom: 24, background: '#111827', border: '1px solid #1e2535', borderRadius: 8, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0, marginBottom: 24, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
         {[
           { label: 'Total Results',  value: total,     color: '#3b82f6' },
           { label: 'High Risk',      value: highRisk,  color: '#ef4444' },
           { label: 'Diabetic Flags', value: diabetic,  color: '#f59e0b' },
           { label: 'Anomalies',      value: anomalies, color: '#ef4444' },
         ].map((item, i) => (
-          <div key={item.label} style={{ padding: '16px 20px', borderRight: i < 3 ? '1px solid #1e2535' : 'none' }}>
-            <div style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
+          <div key={item.label} style={{ padding: '16px 20px', borderRight: i < 3 ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{item.label}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: item.color, lineHeight: 1 }}>{item.value ?? '—'}</div>
           </div>
         ))}
       </div>
 
-      {/* Model breakdown bar */}
       {Object.keys(modelCounts).length > 0 && (
         <div className="card" style={{ padding: '16px 20px', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12 }}>
             Results by Model
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {Object.entries(modelCounts).map(([model, count]) => (
               <div key={model} style={{ flex: 1, minWidth: 120 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 11, color: '#64748b' }}>{MODEL_LABELS[model] || model}</span>
-                  <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>{count}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{MODEL_LABELS[model] || model}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>{count}</span>
                 </div>
-                <div style={{ background: '#1e2535', borderRadius: 4, height: 6 }}>
+                <div style={{ background: 'var(--border)', borderRadius: 4, height: 6 }}>
                   <div style={{
                     height: 6, borderRadius: 4,
                     width: `${(count / total) * 100}%`,
@@ -622,7 +603,6 @@ export default function AnalysisPage() {
         </div>
       )}
 
-      {/* Charts Row */}
       {analyses.length > 0 && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
@@ -637,10 +617,10 @@ export default function AnalysisPage() {
                 onClick={() => setExpandedChart(key)}
                 style={{ padding: 20, cursor: 'pointer', transition: 'border-color 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = '#3b82f6'}
-                onMouseLeave={e => e.currentTarget.style.borderColor = '#2a3347'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {label}
                   </div>
                   <span style={{ fontSize: 10, color: '#3b82f6', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 4, padding: '2px 7px', fontWeight: 600 }}>
@@ -654,7 +634,6 @@ export default function AnalysisPage() {
             ))}
           </div>
 
-          {/* Expanded Chart Modal */}
           {expandedChart && createPortal(
             <div
               style={{
@@ -666,16 +645,16 @@ export default function AnalysisPage() {
               onClick={() => setExpandedChart(null)}
             >
               <div
-                style={{ background: '#161b27', border: '1px solid #2a3347', borderRadius: 14, padding: 32, width: '100%', maxWidth: 900 }}
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 32, width: '100%', maxWidth: 900 }}
                 onClick={e => e.stopPropagation()}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
                     {expandedChart === 'risk'       && 'Risk Distribution'}
                     {expandedChart === 'confidence' && 'Avg Confidence by Model'}
                     {expandedChart === 'scatter'    && 'Confidence vs Risk — Decision Tree & Logistic Regression'}
                   </div>
-                  <button onClick={() => setExpandedChart(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 22, lineHeight: 1 }}>×</button>
+                  <button onClick={() => setExpandedChart(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 22, lineHeight: 1 }}>×</button>
                 </div>
                 {expandedChart === 'risk'       && <RiskPieChart analyses={analyses} height={420} />}
                 {expandedChart === 'confidence' && <ConfidenceBarChart analyses={analyses} modelCounts={modelCounts} height={420} />}
@@ -687,12 +666,11 @@ export default function AnalysisPage() {
         </>
       )}
 
-      {/* Confusion Matrices */}
       {(logisticCM || treeCM) && (
         <div style={{ marginBottom: 20 }}>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>Confusion Matrices</div>
-            <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Confusion Matrices</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
               Computed on the 20% held-out test set from the most recent batch upload
             </div>
           </div>
@@ -715,13 +693,11 @@ export default function AnalysisPage() {
         </div>
       )}
 
-      {/* Anomaly Detection Card — always visible when data exists, above filters */}
       {!loading && <AnomalyCard analyses={analyses} />}
 
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
-          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"
             placeholder="Search by patient name..."
@@ -729,8 +705,8 @@ export default function AnalysisPage() {
             onChange={e => { setSearch(e.target.value); setPage(1) }}
             style={{
               width: '100%', padding: '9px 12px 9px 34px',
-              background: '#161b27', border: '1px solid #2a3347',
-              borderRadius: 8, color: '#e2e8f0', fontSize: 13,
+              background: 'var(--bg-surface)', border: '1px solid var(--border)',
+              borderRadius: 8, color: 'var(--text-primary)', fontSize: 13,
               outline: 'none', fontFamily: 'inherit',
             }}
           />
@@ -739,8 +715,8 @@ export default function AnalysisPage() {
           value={modelFilter}
           onChange={e => { setModelFilter(e.target.value); setPage(1) }}
           style={{
-            padding: '9px 14px', background: '#161b27', border: '1px solid #2a3347',
-            borderRadius: 8, color: modelFilter ? '#e2e8f0' : '#64748b',
+            padding: '9px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
+            borderRadius: 8, color: modelFilter ? 'var(--text-primary)' : 'var(--text-muted)',
             fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
@@ -753,8 +729,8 @@ export default function AnalysisPage() {
           value={riskFilter}
           onChange={e => { setRiskFilter(e.target.value); setPage(1) }}
           style={{
-            padding: '9px 14px', background: '#161b27', border: '1px solid #2a3347',
-            borderRadius: 8, color: riskFilter ? '#e2e8f0' : '#64748b',
+            padding: '9px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
+            borderRadius: 8, color: riskFilter ? 'var(--text-primary)' : 'var(--text-muted)',
             fontSize: 13, outline: 'none', fontFamily: 'inherit', cursor: 'pointer',
           }}
         >
@@ -767,7 +743,6 @@ export default function AnalysisPage() {
         </select>
       </div>
 
-      {/* Export */}
       <button
         onClick={() => exportCSV(
           filtered.map(a => ({
@@ -782,35 +757,34 @@ export default function AnalysisPage() {
         )}
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
-          padding: '9px 14px', background: '#161b27',
-          border: '1px solid #2a3347', borderRadius: 8,
-          color: '#94a3b8', fontSize: 13, cursor: 'pointer',
+          padding: '9px 14px', background: 'var(--bg-surface)',
+          border: '1px solid var(--border)', borderRadius: 8,
+          color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
           fontFamily: 'inherit', whiteSpace: 'nowrap', transition: 'all 0.15s',
           marginBottom: 16,
         }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = '#3b82f6'; e.currentTarget.style.color = '#3b82f6' }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = '#2a3347'; e.currentTarget.style.color = '#94a3b8' }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)' }}
       >
         <Download size={14} />
         Export CSV
       </button>
 
-      {/* Table */}
       <div className="card" style={{ overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>Loading analyses...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading analyses...</div>
         ) : error ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#ef4444' }}>{error}</div>
         ) : paginated.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>No results found</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No results found</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #2a3347' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['Patient', 'Model', 'Risk Label', 'Confidence', 'Detail', 'Date'].map(h => (
                   <th key={h} style={{
                     padding: '12px 16px', textAlign: 'left',
-                    fontSize: 11, fontWeight: 600, color: '#64748b',
+                    fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
                     textTransform: 'uppercase', letterSpacing: '0.5px',
                   }}>{h}</th>
                 ))}
@@ -819,33 +793,31 @@ export default function AnalysisPage() {
             <tbody>
               {paginated.map((a, i) => (
                 <tr key={a.id} style={{
-                  borderBottom: '1px solid #1e2535',
-                  background: a.risk_label === 'ANOMALY'
-                    ? 'rgba(239,68,68,0.04)'
-                    : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                  borderBottom: '1px solid var(--border)',
+                  background: a.risk_label === 'ANOMALY' ? 'rgba(239,68,68,0.04)' : 'transparent',
                 }}>
-                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#e2e8f0' }}>
-                    {a.patient_name || <span style={{ color: '#475569' }}>Unknown</span>}
+                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+                    {a.patient_name || <span style={{ color: 'var(--text-secondary)' }}>Unknown</span>}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{
                       fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-                      background: '#1e2535', color: MODEL_COLORS[a.model_type] || '#94a3b8',
-                      border: '1px solid #2a3347',
+                      background: 'var(--bg-surface-alt)', color: MODEL_COLORS[a.model_type] || 'var(--text-secondary)',
+                      border: '1px solid var(--border)',
                     }}>
                       {MODEL_LABELS[a.model_type] || a.model_type}
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px' }}>
-                    {a.risk_label ? <RiskBadge risk={a.risk_label} /> : <span style={{ color: '#475569' }}>—</span>}
+                    {a.risk_label ? <RiskBadge risk={a.risk_label} /> : <span style={{ color: 'var(--text-secondary)' }}>—</span>}
                   </td>
-                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#e2e8f0' }}>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: 'var(--text-primary)' }}>
                     {a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <ResultDetail result={a.result} modelType={a.model_type} />
                   </td>
-                  <td style={{ padding: '12px 16px', fontSize: 12, color: '#475569' }}>
+                  <td style={{ padding: '12px 16px', fontSize: 12, color: 'var(--text-secondary)' }}>
                     {new Date(a.created_at).toLocaleDateString()}
                   </td>
                 </tr>
@@ -855,10 +827,9 @@ export default function AnalysisPage() {
         )}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
-          <span style={{ fontSize: 12, color: '#64748b' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length}
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -866,8 +837,8 @@ export default function AnalysisPage() {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
               style={{
-                padding: '6px 14px', background: '#161b27', border: '1px solid #2a3347',
-                borderRadius: 6, color: page === 1 ? '#475569' : '#94a3b8',
+                padding: '6px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                borderRadius: 6, color: page === 1 ? 'var(--text-faint)' : 'var(--text-secondary)',
                 cursor: page === 1 ? 'not-allowed' : 'pointer', fontSize: 12, fontFamily: 'inherit',
               }}
             >Prev</button>
@@ -875,8 +846,8 @@ export default function AnalysisPage() {
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               style={{
-                padding: '6px 14px', background: '#161b27', border: '1px solid #2a3347',
-                borderRadius: 6, color: page === totalPages ? '#475569' : '#94a3b8',
+                padding: '6px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                borderRadius: 6, color: page === totalPages ? 'var(--text-faint)' : 'var(--text-secondary)',
                 cursor: page === totalPages ? 'not-allowed' : 'pointer', fontSize: 12, fontFamily: 'inherit',
               }}
             >Next</button>

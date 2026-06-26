@@ -22,20 +22,16 @@ export default function AdminLogin() {
   const navigate = useNavigate()
 
   const getError = (key) => (!touched[key] ? '' : RULES[key](form[key]))
-
   const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
-
   const handleChange = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }))
     if (serverError) setServerError(null)
   }
-
   const isFormValid = () => Object.keys(RULES).every((key) => RULES[key](form[key]) === '')
 
   const handleSubmit = async () => {
     setTouched({ username: true, password: true })
     if (!isFormValid()) return
-
     setLoading(true)
     setServerError(null)
     try {
@@ -59,14 +55,13 @@ export default function AdminLogin() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0a0d14',
+      minHeight: '100vh', background: 'var(--bg-base)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#161b27', border: '1px solid #2a3347',
+        background: 'var(--bg-surface)', border: '1px solid var(--border)',
         borderRadius: 12, padding: 36, width: '100%', maxWidth: 400,
       }}>
-        {/* Header */}
         <div style={{ marginBottom: 28, textAlign: 'center' }}>
           <div style={{
             width: 44, height: 44, borderRadius: 10,
@@ -76,14 +71,13 @@ export default function AdminLogin() {
           }}>
             🛡️
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: '#e2e8f0' }}>Admin Panel</div>
-          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Staff access only</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Admin Panel</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Staff access only</div>
         </div>
 
-        {/* Username */}
         <div style={{ marginBottom: 14 }}>
           <label style={{
-            fontSize: 11, color: '#64748b', textTransform: 'uppercase',
+            fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase',
             letterSpacing: '0.4px', display: 'block', marginBottom: 6,
           }}>
             Username
@@ -96,9 +90,9 @@ export default function AdminLogin() {
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             style={{
               width: '100%', padding: '9px 12px',
-              background: '#0f1117',
-              border: `1px solid ${usernameError ? '#ef4444' : '#2a3347'}`,
-              borderRadius: 8, color: '#e2e8f0', fontSize: 13,
+              background: 'var(--bg-base)',
+              border: `1px solid ${usernameError ? '#ef4444' : 'var(--border)'}`,
+              borderRadius: 8, color: 'var(--text-primary)', fontSize: 13,
               outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
             }}
           />
@@ -107,10 +101,9 @@ export default function AdminLogin() {
           )}
         </div>
 
-        {/* Password */}
         <div style={{ marginBottom: 14 }}>
           <label style={{
-            fontSize: 11, color: '#64748b', textTransform: 'uppercase',
+            fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase',
             letterSpacing: '0.4px', display: 'block', marginBottom: 6,
           }}>
             Password
@@ -123,9 +116,9 @@ export default function AdminLogin() {
             onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
             style={{
               width: '100%', padding: '9px 12px',
-              background: '#0f1117',
-              border: `1px solid ${passwordError ? '#ef4444' : '#2a3347'}`,
-              borderRadius: 8, color: '#e2e8f0', fontSize: 13,
+              background: 'var(--bg-base)',
+              border: `1px solid ${passwordError ? '#ef4444' : 'var(--border)'}`,
+              borderRadius: 8, color: 'var(--text-primary)', fontSize: 13,
               outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
             }}
           />
@@ -136,7 +129,7 @@ export default function AdminLogin() {
 
         {serverError && (
           <div style={{
-            padding: '9px 12px', background: '#7f1d1d',
+            padding: '9px 12px', background: '#450a0a',
             borderRadius: 8, color: '#fca5a5', fontSize: 13, marginBottom: 14,
           }}>
             {serverError}
@@ -158,7 +151,7 @@ export default function AdminLogin() {
         </button>
 
         <div style={{ marginTop: 16, textAlign: 'center' }}>
-          <a href="/" style={{ fontSize: 12, color: '#475569', textDecoration: 'none' }}>
+          <a href="/" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>
             ← Back to main app
           </a>
         </div>

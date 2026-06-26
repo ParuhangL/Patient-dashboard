@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { Activity } from 'lucide-react'
 import { register, login } from '../api/index'
 
-// ── Validation rules ────────────────────────────────────────────────────────
 const RULES = {
   username: (v) => {
     if (!v) return 'Username is required.'
@@ -13,7 +12,7 @@ const RULES = {
     return ''
   },
   email: (v) => {
-    if (!v) return '' // optional
+    if (!v) return ''
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Enter a valid email address.'
     return ''
   },
@@ -37,32 +36,23 @@ export default function RegisterPage({ onSuccess }) {
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Get error for a field (only show after it's been touched)
   const getError = (key) => {
     if (!touched[key]) return ''
     return RULES[key](form[key], form)
   }
 
-  // Mark field as touched on blur
-  const handleBlur = (key) => {
-    setTouched((t) => ({ ...t, [key]: true }))
-  }
+  const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
 
   const handleChange = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }))
-    // Clear server error when user starts editing
     if (serverError) setServerError('')
   }
 
-  const isFormValid = () => {
-    return Object.keys(RULES).every((key) => RULES[key](form[key], form) === '')
-  }
+  const isFormValid = () => Object.keys(RULES).every((key) => RULES[key](form[key], form) === '')
 
   const handleSubmit = async () => {
-    // Touch all fields to show all errors
     setTouched({ username: true, email: true, password: true, confirm: true })
     if (!isFormValid()) return
-
     setLoading(true)
     setServerError('')
     try {
@@ -83,7 +73,7 @@ export default function RegisterPage({ onSuccess }) {
     const hasError = !!error
     return (
       <div style={{ marginBottom: 16 }}>
-        <label style={{ fontSize: 12, color: '#94a3b8', display: 'block', marginBottom: 6 }}>
+        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
           {label}
         </label>
         <input
@@ -95,16 +85,14 @@ export default function RegisterPage({ onSuccess }) {
           placeholder={placeholder}
           style={{
             width: '100%', padding: '10px 14px', borderRadius: 8,
-            background: '#0f1117',
-            border: `1px solid ${hasError ? '#ef4444' : '#2a3347'}`,
-            color: '#e2e8f0', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+            background: 'var(--bg-base)',
+            border: `1px solid ${hasError ? '#ef4444' : 'var(--border)'}`,
+            color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
             transition: 'border-color 0.15s',
           }}
         />
         {hasError && (
-          <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>
-            {error}
-          </div>
+          <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{error}</div>
         )}
       </div>
     )
@@ -112,14 +100,14 @@ export default function RegisterPage({ onSuccess }) {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0f1117',
+      minHeight: '100vh', background: 'var(--bg-base)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        width: 400, background: '#161b27',
-        border: '1px solid #2a3347', borderRadius: 16, padding: 40,
+        width: 400, background: 'var(--bg-surface)',
+        border: '1px solid var(--border)', borderRadius: 16, padding: 40,
       }}>
-        {/* Logo */}
+
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
@@ -129,14 +117,14 @@ export default function RegisterPage({ onSuccess }) {
             <Activity size={20} color="white" />
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0' }}>MediDash</div>
-            <div style={{ fontSize: 11, color: '#64748b' }}>Diagnostic AI Platform</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>MediDash</div>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Diagnostic AI Platform</div>
           </div>
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: '#e2e8f0', margin: 0 }}>Create account</h2>
-          <p style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Get started with MediDash</p>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Create account</h2>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Get started with MediDash</p>
         </div>
 
         {serverError && (
@@ -159,15 +147,15 @@ export default function RegisterPage({ onSuccess }) {
           disabled={loading}
           style={{
             width: '100%', padding: '11px', borderRadius: 8, border: 'none',
-            background: loading ? '#1e3a5f' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-            color: 'white', fontSize: 14, fontWeight: 600,
+            background: loading ? 'var(--bg-surface-alt)' : 'linear-gradient(135deg, #3b82f6, #06b6d4)',
+            color: loading ? 'var(--text-muted)' : 'white', fontSize: 14, fontWeight: 600,
             cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
           }}
         >
           {loading ? 'Creating account...' : 'Create account'}
         </button>
 
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#64748b' }}>
+        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
           Already have an account?{' '}
           <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none' }}>
             Sign in

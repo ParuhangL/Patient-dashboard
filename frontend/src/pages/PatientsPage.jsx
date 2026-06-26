@@ -9,27 +9,38 @@ import { createPortal } from 'react-dom'
 import { useToast } from '../App'
 
 const RISK_COLORS = { LOW: '#10b981', MEDIUM: '#f59e0b', HIGH: '#ef4444' }
-const RISK_BG =     { LOW: '#052e16', MEDIUM: '#431407', HIGH: '#450a0a' }
 
 function RiskBadge({ risk }) {
+  const bgVar   = risk === 'LOW' ? 'var(--risk-low-bg)'   : risk === 'MEDIUM' ? 'var(--risk-med-bg)'   : risk === 'HIGH' ? 'var(--risk-high-bg)'   : 'var(--bg-surface-alt)'
+  const textVar = risk === 'LOW' ? 'var(--risk-low-text)' : risk === 'MEDIUM' ? 'var(--risk-med-text)' : risk === 'HIGH' ? 'var(--risk-high-text)' : 'var(--text-muted)'
   return (
     <span style={{
       fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
-      background: RISK_BG[risk] || '#1e2535',
-      color: RISK_COLORS[risk] || '#64748b',
-      border: `1px solid ${RISK_COLORS[risk] || '#2a3347'}30`,
+      background: bgVar, color: textVar,
     }}>
       {risk}
     </span>
   )
 }
 
+function StatusBadge({ active }) {
+  return (
+    <span style={{
+      fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 3,
+      background: active ? 'var(--status-active-bg)' : 'var(--status-inactive-bg)',
+      color: active ? 'var(--status-active-text)' : 'var(--status-inactive-text)',
+    }}>
+      {active ? 'Active' : 'Inactive'}
+    </span>
+  )
+}
+
 function MetricCard({ label, value, unit, color = '#3b82f6' }) {
   return (
-    <div style={{ background: '#0f1117', borderRadius: 6, padding: '10px 14px' }}>
-      <div style={{ fontSize: 10, color: '#475569', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+    <div style={{ background: 'var(--bg-base)', borderRadius: 6, padding: '10px 14px' }}>
+      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 600, color }}>
-        {value ?? '—'}{value != null && unit && <span style={{ fontSize: 11, fontWeight: 400, color: '#475569', marginLeft: 3 }}>{unit}</span>}
+        {value ?? '—'}{value != null && unit && <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-secondary)', marginLeft: 3 }}>{unit}</span>}
       </div>
     </div>
   )
@@ -37,7 +48,7 @@ function MetricCard({ label, value, unit, color = '#3b82f6' }) {
 
 function BPTrendChart({ records }) {
   if (!records || records.length === 0)
-    return <div style={{ fontSize: 13, color: '#475569', padding: '16px 0' }}>No medical records available.</div>
+    return <div style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '16px 0' }}>No medical records available.</div>
 
   const data = [...records]
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
@@ -50,7 +61,7 @@ function BPTrendChart({ records }) {
     .filter(r => r.Systolic !== null || r.Diastolic !== null)
 
   if (data.length === 0)
-    return <div style={{ fontSize: 13, color: '#475569', padding: '16px 0' }}>No BP data in records.</div>
+    return <div style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '16px 0' }}>No BP data in records.</div>
 
   const allValues = data.flatMap(d => [d.Systolic, d.Diastolic]).filter(v => v !== null)
   const minVal = Math.max(40, Math.floor(Math.min(...allValues) / 10) * 10 - 10)
@@ -60,7 +71,7 @@ function BPTrendChart({ records }) {
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', gap: 16, marginBottom: 10, paddingLeft: 4 }}>
         {[['#3b82f6', 'Systolic'], ['#06b6d4', 'Diastolic']].map(([color, label]) => (
-          <span key={label} style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span key={label} style={{ fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ display: 'inline-block', width: 20, height: 2, background: color, borderRadius: 2 }} />
             {label}
           </span>
@@ -68,12 +79,12 @@ function BPTrendChart({ records }) {
       </div>
       <ResponsiveContainer width="100%" height={190}>
         <LineChart data={data} margin={{ top: 4, right: 12, left: 0, bottom: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e2535" vertical={false} />
-          <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-          <YAxis domain={[minVal, maxVal]} tick={{ fill: '#475569', fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+          <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+          <YAxis domain={[minVal, maxVal]} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickLine={false} axisLine={false} width={36} />
           <Tooltip
-            contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 6, fontSize: 12 }}
-            labelStyle={{ color: '#e2e8f0', marginBottom: 4 }}
+            contentStyle={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12 }}
+            labelStyle={{ color: 'var(--text-primary)', marginBottom: 4 }}
             formatter={(value, name) => [`${value} mmHg`, name]}
           />
           <Line type="monotone" dataKey="Systolic" stroke="#3b82f6" strokeWidth={2} dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }} activeDot={{ r: 5 }} connectNulls />
@@ -107,24 +118,24 @@ function RiskTrendChart({ analyses }) {
   })
 
   if (data.length < 2)
-    return <div style={{ fontSize: 13, color: '#475569', padding: '12px 0' }}>Not enough analyses to show a trend.</div>
+    return <div style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '12px 0' }}>Not enough analyses to show a trend.</div>
 
   return (
     <ResponsiveContainer width="100%" height={170}>
       <LineChart data={data} margin={{ top: 4, right: 12, left: 8, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#1e2535" vertical={false} />
-        <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-        <YAxis domain={[0.5, 3.5]} ticks={[1, 2, 3]} width={32} tick={{ fill: '#475569', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => RISK_LABEL[v] ?? ''} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey="date" tick={{ fill: 'var(--text-secondary)', fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+        <YAxis domain={[0.5, 3.5]} ticks={[1, 2, 3]} width={32} tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={v => RISK_LABEL[v] ?? ''} />
         <Tooltip
-          contentStyle={{ background: '#1e2535', border: '1px solid #2a3347', borderRadius: 6 }}
-          labelStyle={{ color: '#e2e8f0' }}
+          contentStyle={{ background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 6 }}
+          labelStyle={{ color: 'var(--text-primary)' }}
           formatter={v => [RISK_LABEL_FULL[v], 'Risk']}
         />
         <Line
           type="stepAfter" dataKey="score" stroke="#8b5cf6" strokeWidth={2} connectNulls
           dot={(props) => {
             const { cx, cy, payload } = props
-            return <circle key={payload.date} cx={cx} cy={cy} r={4} fill={RISK_COLOR[payload.score]} stroke="#161b27" strokeWidth={2} />
+            return <circle key={payload.date} cx={cx} cy={cy} r={4} fill={RISK_COLOR[payload.score]} stroke="var(--bg-surface)" strokeWidth={2} />
           }}
         />
       </LineChart>
@@ -261,28 +272,6 @@ function exportPatientPDF(patient, records, analyses) {
   win.onload = () => { win.focus(); win.print() }
 }
 
-function Field({ label, value, name, type = 'text', options, onChange, disabled }) {
-  const inputStyle = {
-    width: '100%', padding: '8px 10px',
-    background: disabled ? '#0a0d14' : '#0f1117',
-    border: '1px solid #2a3347', borderRadius: 6,
-    color: disabled ? '#475569' : '#e2e8f0',
-    fontSize: 13, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
-  }
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
-      {options ? (
-        <select name={name} value={value ?? ''} onChange={onChange} disabled={disabled} style={{ ...inputStyle, cursor: disabled ? 'default' : 'pointer' }}>
-          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      ) : (
-        <input type={type} name={name} value={value ?? ''} onChange={onChange} disabled={disabled} style={inputStyle} />
-      )}
-    </div>
-  )
-}
-
 function computeAge(dob) {
   if (!dob) return null
   const born = new Date(dob)
@@ -416,14 +405,14 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
 
   const inputStyle = (name) => ({
     width: '100%', padding: '8px 10px',
-    background: '#0f1117',
-    border: `1px solid ${getError(name) ? '#ef4444' : '#2a3347'}`,
-    borderRadius: 6, color: '#e2e8f0', fontSize: 13,
+    background: 'var(--bg-base)',
+    border: `1px solid ${getError(name) ? '#ef4444' : 'var(--border)'}`,
+    borderRadius: 6, color: 'var(--text-primary)', fontSize: 13,
     outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
   })
 
   const sectionLabel = (text) => (
-    <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>
       {text}
     </div>
   )
@@ -435,7 +424,7 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
 
   const TextField = ({ label, name, type = 'text', placeholder = '' }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
+      <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
       <input
         type={type} name={name} value={form[name] ?? ''}
         onChange={handleChange}
@@ -455,7 +444,7 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
         <TextField label="Last Name *"  name="last_name" />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Date of Birth *</label>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Date of Birth *</label>
           <input
             type="date" name="date_of_birth" value={form.date_of_birth}
             max={today}
@@ -470,7 +459,7 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Gender</label>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Gender</label>
           <select
             name="gender" value={form.gender}
             onChange={handleChange}
@@ -497,7 +486,7 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
           { label: 'Cholesterol (mg/dL)', name: 'cholesterol',              placeholder: '50–500' },
         ].map(({ label, name, placeholder }) => (
           <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
+            <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
             <input
               type="number" name={name} value={form[name] ?? ''}
               onChange={handleChange}
@@ -511,14 +500,14 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
         ))}
       </div>
 
-      <div style={{ marginTop: 8, padding: '8px 12px', background: '#0f1f10', border: '1px solid #1a3a1a', borderRadius: 6, fontSize: 12, color: '#86efac' }}>
+      <div style={{ marginTop: 8, padding: '8px 12px', background: '#0f2a14', border: '1px solid #1a3a1a', borderRadius: 6, fontSize: 12, color: '#86efac' }}>
         Editing vitals here updates the patient's baseline. To track changes over time, use <strong>Add Visit</strong>.
       </div>
 
       {sectionLabel('Lifestyle')}
       <div style={{ display: 'flex', gap: 24 }}>
         {[{ label: 'Smoker', name: 'is_smoker' }, { label: 'Diabetic', name: 'is_diabetic' }, { label: 'Hypertension', name: 'has_hypertension' }].map(({ label, name }) => (
-          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#94a3b8' }}>
+          <label key={name} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)' }}>
             <input
               type="checkbox" name={name} checked={form[name]}
               onChange={handleChange}
@@ -544,7 +533,7 @@ function EditPatientForm({ patient, onSave, onCancel, toast }) {
         </button>
         <button
           onClick={onCancel} disabled={saving}
-          style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+          style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
         >
           Cancel
         </button>
@@ -649,14 +638,14 @@ function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
   }
 
   const inputStyle = (name) => ({
-    width: '100%', padding: '8px 10px', background: '#0f1117',
-    border: `1px solid ${getError(name) ? '#ef4444' : '#2a3347'}`,
-    borderRadius: 6, color: '#e2e8f0', fontSize: 13,
+    width: '100%', padding: '8px 10px', background: 'var(--bg-base)',
+    border: `1px solid ${getError(name) ? '#ef4444' : 'var(--border)'}`,
+    borderRadius: 6, color: 'var(--text-primary)', fontSize: 13,
     outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
   })
 
   const sectionLabel = (text) => (
-    <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>
+    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 20, marginBottom: 10 }}>
       {text}
     </div>
   )
@@ -668,14 +657,14 @@ function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
 
   return (
     <div>
-      <div style={{ fontSize: 12, color: '#475569', marginBottom: 16, padding: '8px 12px', background: '#0f1117', borderRadius: 6, borderLeft: '3px solid #2a3347' }}>
-        Vitals recorded here update the patient's baseline. Use <strong style={{ color: '#e2e8f0' }}>Edit Patient</strong> to update cholesterol.
+      <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16, padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 6, borderLeft: '3px solid var(--border)' }}>
+        Vitals recorded here update the patient's baseline. Use <strong style={{ color: 'var(--text-primary)' }}>Edit Patient</strong> to update cholesterol.
       </div>
 
       {sectionLabel('Visit Details')}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
             Visit Date <span style={{ color: '#ef4444' }}>*</span>
           </label>
           <input
@@ -688,7 +677,7 @@ function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
           <FieldError name="visit_date" />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Diagnosis</label>
+          <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Diagnosis</label>
           <input
             type="text" name="diagnosis" value={form.diagnosis}
             onChange={handleChange}
@@ -701,10 +690,10 @@ function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 10 }}>
-        <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+        <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
           Clinical Notes
           {form.notes.length > 0 && (
-            <span style={{ float: 'right', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: form.notes.length > 1000 ? '#ef4444' : '#334155' }}>
+            <span style={{ float: 'right', fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: form.notes.length > 1000 ? '#ef4444' : 'var(--text-faint)' }}>
               {form.notes.length}/1000
             </span>
           )}
@@ -731,7 +720,7 @@ function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
           { label: 'Temperature (°C)',    name: 'temperature',              placeholder: '34–42' },
         ].map(({ label, name, placeholder }) => (
           <div key={name} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 11, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
+            <label style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</label>
             <input
               type="number" name={name} value={form[name]}
               onChange={handleChange}
@@ -760,7 +749,7 @@ function AddVisitForm({ patientId, onSaved, onCancel, toast }) {
         </button>
         <button
           onClick={onCancel} disabled={saving}
-          style={{ padding: '8px 16px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
+          style={{ padding: '8px 16px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}
         >
           Cancel
         </button>
@@ -790,12 +779,12 @@ function DeleteConfirm({ patient, onConfirm, onCancel, toast }) {
         <AlertTriangle size={18} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#fca5a5', marginBottom: 4 }}>Delete {patient.first_name} {patient.last_name}?</div>
-          <div style={{ fontSize: 13, color: '#64748b', marginBottom: 14 }}>This will permanently remove the patient and all associated records.</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 14 }}>This will permanently remove the patient and all associated records.</div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={handleDelete} disabled={deleting} style={{ padding: '7px 14px', background: '#dc2626', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 600, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1, fontFamily: 'inherit' }}>
               {deleting ? 'Deleting...' : 'Yes, delete'}
             </button>
-            <button onClick={onCancel} style={{ padding: '7px 14px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+            <button onClick={onCancel} style={{ padding: '7px 14px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
           </div>
         </div>
       </div>
@@ -853,19 +842,18 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted, 
 
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.7)', overflowY: 'auto', padding: '40px 24px' }} onClick={onClose}>
-      <div style={{ background: '#161b27', borderRadius: 10, width: '100%', maxWidth: 780, border: '1px solid #2a3347', padding: 26, margin: '0 auto' }} onClick={e => e.stopPropagation()}>
+      <div style={{ background: 'var(--bg-surface)', borderRadius: 10, width: '100%', maxWidth: 780, border: '1px solid var(--border)', padding: 26, margin: '0 auto' }} onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             {loading
-              ? <div style={{ fontSize: 17, fontWeight: 600, color: '#e2e8f0' }}>Loading...</div>
+              ? <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>Loading...</div>
               : patient && (
                 <>
-                  <div style={{ fontSize: 17, fontWeight: 600, color: '#e2e8f0' }}>
+                  <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--text-primary)' }}>
                     {mode === 'edit' ? 'Edit Patient' : `${patient.first_name} ${patient.last_name}`}
                   </div>
-                  <div style={{ fontSize: 12, color: '#475569', marginTop: 3, display: 'flex', gap: 10 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', gap: 10 }}>
                     <span>Age {patient.age ?? '—'}</span>
                     <span>·</span>
                     <span>{patient.gender === 'M' ? 'Male' : patient.gender === 'F' ? 'Female' : 'Other'}</span>
@@ -900,9 +888,9 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted, 
               </>
             )}
             {mode !== 'view' && (
-              <button onClick={() => setMode('view')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', fontSize: 13, padding: 4 }}>← Back</button>
+              <button onClick={() => setMode('view')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13, padding: 4 }}>← Back</button>
             )}
-            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 4 }}><X size={18} /></button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}><X size={18} /></button>
           </div>
         </div>
 
@@ -913,7 +901,7 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted, 
 
         {patient && mode === 'view' && (
           <>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Health Metrics</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Health Metrics</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 16 }}>
               <MetricCard label="Systolic BP"  value={patient.blood_pressure_systolic}  unit="mmHg" color="#3b82f6" />
               <MetricCard label="Diastolic BP" value={patient.blood_pressure_diastolic} unit="mmHg" color="#06b6d4" />
@@ -925,37 +913,42 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted, 
 
             <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
               {[{ label: 'Smoker', val: patient.is_smoker }, { label: 'Diabetic', val: patient.is_diabetic }, { label: 'Hypertension', val: patient.has_hypertension }].map(({ label, val }) => (
-                <span key={label} style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 4, background: val ? '#450a0a' : '#1e2535', color: val ? '#fca5a5' : '#475569', border: `1px solid ${val ? '#ef444430' : '#2a3347'}` }}>
+                <span key={label} style={{
+                  fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 4,
+                  background: val ? 'var(--risk-high-bg)' : 'var(--bg-surface-alt)',
+                  color: val ? 'var(--risk-high-text)' : 'var(--text-secondary)',
+                  border: `1px solid ${val ? 'rgba(239,68,68,0.2)' : 'var(--border)'}`,
+                }}>
                   {label}: {val ? 'Yes' : 'No'}
                 </span>
               ))}
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
-              Blood Pressure Trend <span style={{ color: '#334155', fontWeight: 400 }}>({records.length} visits)</span>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+              Blood Pressure Trend <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({records.length} visits)</span>
             </div>
-            <div style={{ background: '#0f1117', borderRadius: 8, padding: 14, marginBottom: 16 }}>
+            <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 14, marginBottom: 16 }}>
               <BPTrendChart records={records} />
             </div>
 
             {records.some(r => r.notes || r.diagnosis) && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Visit Notes</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Visit Notes</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {[...records].sort((a, b) => new Date(b.visit_date) - new Date(a.visit_date)).filter(r => r.notes || r.diagnosis).map(r => (
-                    <div key={r.id} style={{ background: '#0f1117', borderRadius: 6, padding: '10px 14px', borderLeft: '2px solid #2a3347' }}>
-                      <div style={{ fontSize: 11, color: '#334155', marginBottom: 6 }}>
+                    <div key={r.id} style={{ background: 'var(--bg-base)', borderRadius: 6, padding: '10px 14px', borderLeft: '2px solid var(--border)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 6 }}>
                         {new Date(r.visit_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })} · {new Date(r.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                       {r.diagnosis && (
-                        <div style={{ fontSize: 13, color: '#e2e8f0', marginBottom: r.notes ? 4 : 0 }}>
-                          <span style={{ fontSize: 10, fontWeight: 600, color: '#06b6d4', background: '#0c2233', padding: '1px 6px', borderRadius: 3, marginRight: 8, textTransform: 'uppercase' }}>Dx</span>
+                        <div style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: r.notes ? 4 : 0 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: '#06b6d4', background: 'rgba(6,182,212,0.1)', padding: '1px 6px', borderRadius: 3, marginRight: 8, textTransform: 'uppercase' }}>Dx</span>
                           {r.diagnosis}
                         </div>
                       )}
                       {r.notes && (
-                        <div style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.5 }}>
-                          <span style={{ fontSize: 10, fontWeight: 600, color: '#8b5cf6', background: '#1a1033', padding: '1px 6px', borderRadius: 3, marginRight: 8, textTransform: 'uppercase' }}>Note</span>
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: '#8b5cf6', background: 'rgba(139,92,246,0.1)', padding: '1px 6px', borderRadius: 3, marginRight: 8, textTransform: 'uppercase' }}>Note</span>
                           {r.notes}
                         </div>
                       )}
@@ -967,48 +960,48 @@ function PatientModal({ patientId, onClose, onPatientUpdated, onPatientDeleted, 
 
             {analyses.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Risk Trend</div>
-                <div style={{ background: '#0f1117', borderRadius: 8, padding: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>Risk Trend</div>
+                <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 14 }}>
                   <RiskTrendChart analyses={analyses} />
                 </div>
               </div>
             )}
 
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
-              Analysis History <span style={{ color: '#334155', fontWeight: 400 }}>({analyses.length})</span>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 10 }}>
+              Analysis History <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({analyses.length})</span>
             </div>
             {analyses.length === 0 ? (
-              <div style={{ fontSize: 13, color: '#334155', padding: '12px 0' }}>No analysis results yet.</div>
+              <div style={{ fontSize: 13, color: 'var(--text-faint)', padding: '12px 0' }}>No analysis results yet.</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #1e2535' }}>
+                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
                     {['Model', 'Risk', 'Confidence', 'Detail', 'Date', 'Notes'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {analyses.map(a => (
-                    <tr key={a.id} style={{ borderBottom: '1px solid #1a2030' }}>
+                    <tr key={a.id} style={{ borderBottom: '1px solid var(--border)' }}>
                       <td style={{ padding: '8px 12px' }}>
-                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 3, background: '#1e2535', color: '#475569', border: '1px solid #2a3347' }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 3, background: 'var(--bg-surface-alt)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
                           {a.model_type.replace('_', ' ').toUpperCase()}
                         </span>
                       </td>
-                      <td style={{ padding: '8px 12px' }}>{a.risk_label ? <RiskBadge risk={a.risk_label} /> : <span style={{ color: '#334155' }}>—</span>}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 13, color: '#94a3b8' }}>{a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#64748b' }}>
+                      <td style={{ padding: '8px 12px' }}>{a.risk_label ? <RiskBadge risk={a.risk_label} /> : <span style={{ color: 'var(--text-faint)' }}>—</span>}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>{a.confidence != null ? `${(a.confidence * 100).toFixed(0)}%` : '—'}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-muted)' }}>
                         {a.model_type === 'linear_regression' && a.result?.predicted_systolic_bp != null ? (
-                          <span>SBP: <span style={{ color: '#e2e8f0' }}>{a.result.predicted_systolic_bp} mmHg</span>{a.result?.predicted_diastolic_bp != null && <span> · DBP: <span style={{ color: '#e2e8f0' }}>{a.result.predicted_diastolic_bp} mmHg</span></span>}</span>
+                          <span>SBP: <span style={{ color: 'var(--text-primary)' }}>{a.result.predicted_systolic_bp} mmHg</span>{a.result?.predicted_diastolic_bp != null && <span> · DBP: <span style={{ color: 'var(--text-primary)' }}>{a.result.predicted_diastolic_bp} mmHg</span></span>}</span>
                         ) : a.model_type === 'logistic' && a.result?.prediction ? (
-                          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 3, background: a.result.prediction === 'Diabetic' ? '#450a0a' : '#052e16', color: a.result.prediction === 'Diabetic' ? '#fca5a5' : '#6ee7b7' }}>{a.result.prediction}</span>
+                          <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 7px', borderRadius: 3, background: a.result.prediction === 'Diabetic' ? 'var(--risk-high-bg)' : 'var(--risk-low-bg)', color: a.result.prediction === 'Diabetic' ? 'var(--risk-high-text)' : 'var(--risk-low-text)' }}>{a.result.prediction}</span>
                         ) : a.model_type === 'kmeans' && a.result?.profile ? (
                           <span>{a.result.profile}</span>
-                        ) : <span style={{ color: '#334155' }}>—</span>}
+                        ) : <span style={{ color: 'var(--text-faint)' }}>—</span>}
                       </td>
-                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#334155' }}>{new Date(a.created_at).toLocaleDateString()}</td>
-                      <td style={{ padding: '8px 12px', fontSize: 12, color: '#334155' }}>{a.notes || '—'}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-faint)' }}>{new Date(a.created_at).toLocaleDateString()}</td>
+                      <td style={{ padding: '8px 12px', fontSize: 12, color: 'var(--text-faint)' }}>{a.notes || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -1165,61 +1158,59 @@ export default function PatientsPage() {
   }
 
   const selectedCount = selectAllMode ? count : selected.size
-  const inputBase = { background: '#161b27', border: '1px solid #2a3347', borderRadius: 7, color: '#e2e8f0', fontSize: 13, outline: 'none', fontFamily: 'inherit' }
+  const inputBase = { background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text-primary)', fontSize: 13, outline: 'none', fontFamily: 'inherit' }
 
   return (
     <div className="animate-fade-in">
-      <div style={{ marginBottom: 22, borderBottom: '1px solid #1e2535', paddingBottom: 18 }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: '#e2e8f0', margin: 0 }}>Patients</h1>
-        <p style={{ fontSize: 13, color: '#475569', marginTop: 3, marginBottom: 0 }}>{count} total in the system</p>
+      <div style={{ marginBottom: 22, borderBottom: '1px solid var(--border)', paddingBottom: 18 }}>
+        <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Patients</h1>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 3, marginBottom: 0 }}>{count} total in the system</p>
       </div>
 
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#334155' }} />
+          <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-faint)' }} />
           <input type="text" placeholder="Search by name or email…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             style={{ ...inputBase, width: '100%', padding: '8px 12px 8px 32px' }} />
         </div>
         <select value={riskFilter} onChange={e => { setRiskFilter(e.target.value); setPage(1) }}
-          style={{ ...inputBase, padding: '8px 12px', cursor: 'pointer', color: riskFilter ? '#e2e8f0' : '#334155' }}>
+          style={{ ...inputBase, padding: '8px 12px', cursor: 'pointer', color: riskFilter ? 'var(--text-primary)' : 'var(--text-faint)' }}>
           <option value="">All Risk Levels</option>
           <option value="LOW">Low</option>
           <option value="MEDIUM">Medium</option>
           <option value="HIGH">High</option>
         </select>
         <button onClick={handleExportAll}
-          style={{ ...inputBase, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', cursor: 'pointer', color: '#475569', whiteSpace: 'nowrap' }}>
+          style={{ ...inputBase, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', cursor: 'pointer', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
           <Download size={13} /> Export CSV
         </button>
       </div>
 
-      {/* Bulk toolbar */}
       {(selected.size > 0 || selectAllMode) && (
-        <div style={{ padding: '10px 14px', marginBottom: 10, background: '#1a2030', border: '1px solid #2a3347', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ padding: '10px 14px', marginBottom: 10, background: 'var(--bg-surface-alt)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {!selectAllMode && selected.size === sortedPatients.length && count > PAGE_SIZE && (
-            <div style={{ padding: '6px 10px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 5, fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span>All <strong style={{ color: '#e2e8f0' }}>{PAGE_SIZE}</strong> on this page selected.</span>
+            <div style={{ padding: '6px 10px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 5, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span>All <strong style={{ color: 'var(--text-primary)' }}>{PAGE_SIZE}</strong> on this page selected.</span>
               <button onClick={activateSelectAllPages} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: 12, fontWeight: 600, padding: 0 }}>
                 Select all {count} patients →
               </button>
             </div>
           )}
           {selectAllMode && (
-            <div style={{ padding: '6px 10px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 5, fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: '6px 10px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 5, fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <span>All <strong style={{ color: '#3b82f6' }}>{count}</strong> patients selected.</span>
               <button onClick={clearSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: 12, fontWeight: 600, padding: 0 }}>Clear</button>
             </div>
           )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 13, color: '#64748b', flex: 1 }}><span style={{ fontWeight: 600, color: '#e2e8f0' }}>{selectedCount}</span> patient{selectedCount !== 1 ? 's' : ''} selected</span>
-            <button onClick={handleBulkExport} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}><span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{selectedCount}</span> patient{selectedCount !== 1 ? 's' : ''} selected</span>
+            <button onClick={handleBulkExport} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Download size={12} /> Export
             </button>
             <button onClick={() => setShowBulkConfirm(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#ef4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Trash2 size={12} /> Delete
             </button>
-            <button onClick={clearSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#334155', padding: 4 }}><X size={15} /></button>
+            <button onClick={clearSelection} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-faint)', padding: 4 }}><X size={15} /></button>
           </div>
         </div>
       )}
@@ -1231,22 +1222,21 @@ export default function PatientsPage() {
           <button onClick={handleBulkDelete} disabled={bulkDeleting} style={{ padding: '6px 14px', background: '#dc2626', border: 'none', borderRadius: 6, color: 'white', fontSize: 12, fontWeight: 600, cursor: bulkDeleting ? 'not-allowed' : 'pointer', opacity: bulkDeleting ? 0.7 : 1, fontFamily: 'inherit' }}>
             {bulkDeleting ? 'Deleting…' : 'Confirm'}
           </button>
-          <button onClick={() => setShowBulkConfirm(false)} disabled={bulkDeleting} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid #2a3347', borderRadius: 6, color: '#64748b', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+          <button onClick={() => setShowBulkConfirm(false)} disabled={bulkDeleting} style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
         </div>
       )}
 
-      {/* Table */}
       <div className="card" style={{ overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#334155', fontSize: 14 }}>Loading…</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-faint)', fontSize: 14 }}>Loading…</div>
         ) : error ? (
           <div style={{ padding: 40, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>{error}</div>
         ) : patients.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#334155', fontSize: 14 }}>No patients found</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-faint)', fontSize: 14 }}>No patients found</div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #1e2535' }}>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 <th style={{ padding: '11px 14px', width: 40 }}>
                   <input type="checkbox"
                     checked={selectAllMode || (selected.size === sortedPatients.length && sortedPatients.length > 0)}
@@ -1256,7 +1246,7 @@ export default function PatientsPage() {
                   />
                 </th>
                 {[{ label: 'Name', key: 'first_name' }, { label: 'Age', key: 'age' }, { label: 'Gender', key: 'gender' }, { label: 'BMI', key: 'bmi' }, { label: 'Risk', key: 'risk_level' }, { label: 'Status', key: '' }].map(({ label, key }) => (
-                  <th key={label} onClick={() => key && handleSort(key)} style={{ padding: '11px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600, color: sortKey === key ? '#3b82f6' : '#334155', textTransform: 'uppercase', letterSpacing: '0.5px', cursor: key ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}>
+                  <th key={label} onClick={() => key && handleSort(key)} style={{ padding: '11px 14px', textAlign: 'left', fontSize: 10, fontWeight: 600, color: sortKey === key ? '#3b82f6' : 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.5px', cursor: key ? 'pointer' : 'default', userSelect: 'none', whiteSpace: 'nowrap' }}>
                     {label}{key && <span style={{ marginLeft: 4, opacity: sortKey === key ? 1 : 0.3 }}>{sortKey === key ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</span>}
                   </th>
                 ))}
@@ -1267,9 +1257,9 @@ export default function PatientsPage() {
                 const isSelected = selectAllMode || selected.has(p.id)
                 return (
                   <tr key={p.id}
-                    style={{ borderBottom: '1px solid #151c28', background: isSelected ? 'rgba(59,130,246,0.07)' : i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)', cursor: 'pointer', transition: 'background 0.1s' }}
-                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(59,130,246,0.05)' }}
-                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}
+                    style={{ borderBottom: '1px solid var(--border)', background: isSelected ? 'rgba(59,130,246,0.07)' : 'transparent', cursor: 'pointer', transition: 'background 0.1s' }}
+                    onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(59,130,246,0.04)' }}
+                    onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
                   >
                     <td style={{ padding: '11px 14px' }} onClick={e => { e.stopPropagation(); toggleSelect(p.id) }}>
                       <input type="checkbox" checked={isSelected} onChange={() => {}} style={{ width: 14, height: 14, accentColor: '#3b82f6', cursor: 'pointer' }} />
@@ -1277,14 +1267,12 @@ export default function PatientsPage() {
                     <td style={{ padding: '11px 14px' }} onClick={() => setSelectedPatientId(p.id)}>
                       <span style={{ fontSize: 13, fontWeight: 500, color: '#3b82f6' }}>{p.first_name} {p.last_name}</span>
                     </td>
-                    <td style={{ padding: '11px 14px', fontSize: 13, color: '#64748b' }} onClick={() => setSelectedPatientId(p.id)}>{p.age}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 13, color: '#64748b' }} onClick={() => setSelectedPatientId(p.id)}>{p.gender}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 13, color: '#64748b' }} onClick={() => setSelectedPatientId(p.id)}>{p.bmi ?? '—'}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text-muted)' }} onClick={() => setSelectedPatientId(p.id)}>{p.age}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text-muted)' }} onClick={() => setSelectedPatientId(p.id)}>{p.gender}</td>
+                    <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text-muted)' }} onClick={() => setSelectedPatientId(p.id)}>{p.bmi ?? '—'}</td>
                     <td style={{ padding: '11px 14px' }} onClick={() => setSelectedPatientId(p.id)}><RiskBadge risk={p.risk_level} /></td>
                     <td style={{ padding: '11px 14px' }} onClick={() => setSelectedPatientId(p.id)}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: p.is_active ? '#10b981' : '#334155', background: p.is_active ? '#052e16' : '#1a2030', padding: '2px 7px', borderRadius: 3 }}>
-                        {p.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      <StatusBadge active={p.is_active} />
                     </td>
                   </tr>
                 )
@@ -1297,13 +1285,13 @@ export default function PatientsPage() {
       {totalPages > 1 && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
           <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            style={{ padding: '5px 9px', background: '#161b27', border: '1px solid #2a3347', borderRadius: 6, color: page === 1 ? '#2a3347' : '#64748b', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>
+            style={{ padding: '5px 9px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, color: page === 1 ? 'var(--border)' : 'var(--text-muted)', cursor: page === 1 ? 'not-allowed' : 'pointer' }}>
             <ChevronLeft size={13} />
           </button>
-          <span style={{ fontSize: 12, color: '#334155' }}>Page {page} of {totalPages}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Page {page} of {totalPages}</span>
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            style={{ padding: '5px 9px', background: '#161b27', border: '1px solid #2a3347', borderRadius: 6, color: page === totalPages ? '#2a3347' : '#64748b', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>
-            <ChevronRight size={13} />
+            style={{ padding: '5px 9px', background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 6, color: page === totalPages ? 'var(--border)' : 'var(--text-muted)', cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>
+          <ChevronRight size={13} />
           </button>
         </div>
       )}

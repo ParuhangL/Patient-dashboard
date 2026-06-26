@@ -5,16 +5,15 @@ from .base import BaseHealthEntity
 
 
 class Patient(BaseHealthEntity):
-    # ── Owner ──────────────────────────────────────────────────────────
+
     owner = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         related_name="patients",
-        null=True,  # null for now so existing rows don't break migration
+        null=True,
         blank=True,
     )
 
-    # ── Demographics ───────────────────────────────────────────────────
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     date_of_birth = models.DateField(null=True, blank=True)
@@ -24,7 +23,6 @@ class Patient(BaseHealthEntity):
     email = models.EmailField(unique=True, blank=True, null=True)
     phone = models.CharField(max_length=20, blank=True)
 
-    # ── Health Metrics ─────────────────────────────────────────────────
     blood_pressure_systolic = models.FloatField(
         validators=[MinValueValidator(50), MaxValueValidator(300)],
         null=True,
@@ -40,7 +38,6 @@ class Patient(BaseHealthEntity):
     bmi = models.FloatField(null=True, blank=True)
     cholesterol = models.FloatField(null=True, blank=True)
 
-    # ── Lifestyle ──────────────────────────────────────────────────────
     is_smoker = models.BooleanField(default=False)
     is_diabetic = models.BooleanField(default=False)
     has_hypertension = models.BooleanField(default=False)
