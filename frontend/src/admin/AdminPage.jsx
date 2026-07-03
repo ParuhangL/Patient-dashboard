@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { useTheme } from '../App'
+import { Sun, Moon } from 'lucide-react'
 
 const adminClient = axios.create({
   baseURL: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/admin`,
@@ -80,16 +82,17 @@ const ACTION_STYLES = {
 }
 
 const NAV_ITEMS = [
-  { key: 'overview',  label: 'Overview',  icon: '' },
-  { key: 'ml',        label: 'ML Health', icon: '' },
-  { key: 'users',     label: 'Users',     icon: '' },
-  { key: 'reports',   label: 'Reports',   icon: '' },
-  { key: 'audit',     label: 'Audit Log', icon: '' },
+  { key: 'overview', label: 'Overview'  },
+  { key: 'ml',       label: 'ML Health' },
+  { key: 'users',    label: 'Users'     },
+  { key: 'reports',  label: 'Reports'   },
+  { key: 'audit',    label: 'Audit Log' },
 ]
 
 export default function AdminPage() {
   const navigate = useNavigate()
   const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}')
+  const { theme, toggle } = useTheme()
 
   const [activeSection, setActiveSection] = useState('overview')
   const [stats, setStats] = useState(null)
@@ -207,13 +210,10 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {mlHealth.map((m, i) => {
+              {mlHealth.map((m) => {
                 const hasAccuracy = m.accuracy_train != null || m.accuracy_test != null
-                const gap = m.accuracy_train != null && m.accuracy_test != null
-                  ? m.accuracy_train - m.accuracy_test
-                  : null
+                const gap = m.accuracy_train != null && m.accuracy_test != null ? m.accuracy_train - m.accuracy_test : null
                 const testColor = gap == null ? 'var(--text-muted)' : gap <= 0.10 ? '#10b981' : '#f59e0b'
-
                 return (
                   <tr key={m.model_type} style={{ borderBottom: '1px solid var(--border)', background: 'transparent' }}>
                     <td style={{ padding: '11px 14px' }}>
@@ -233,12 +233,8 @@ export default function AdminPage() {
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>—</span>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            {(m.accuracy_train * 100).toFixed(1)}%
-                          </span>
-                          <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                            {m.metric_label} train
-                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{(m.accuracy_train * 100).toFixed(1)}%</span>
+                          <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{m.metric_label} train</span>
                         </div>
                       )}
                     </td>
@@ -249,18 +245,10 @@ export default function AdminPage() {
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>—</span>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: testColor }}>
-                            {(m.accuracy_test * 100).toFixed(1)}%
-                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: testColor }}>{(m.accuracy_test * 100).toFixed(1)}%</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                              {m.metric_label} test
-                            </span>
-                            {gap != null && (
-                              <span style={{ fontSize: 10, fontWeight: 600, color: testColor }}>
-                                {gap <= 0.10 ? '✓' : '△'}
-                              </span>
-                            )}
+                            <span style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{m.metric_label} test</span>
+                            {gap != null && <span style={{ fontSize: 10, fontWeight: 600, color: testColor }}>{gap <= 0.10 ? '✓' : '△'}</span>}
                           </div>
                         </div>
                       )}
@@ -309,7 +297,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {users.map((u, i) => (
+              {users.map((u) => (
                 <tr key={u.id} style={{ borderBottom: '1px solid var(--border)', background: 'transparent' }}>
                   <td style={{ padding: '11px 14px' }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{u.username}</div>
@@ -373,7 +361,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {reports.map((r, i) => (
+              {reports.map((r) => (
                 <tr
                   key={r.id}
                   onClick={() => setSelectedReport(r)}
@@ -432,7 +420,6 @@ export default function AdminPage() {
           ))}
         </div>
       </div>
-
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
         {loadingAudit ? (
           <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-muted)' }}>Loading audit log…</div>
@@ -448,7 +435,7 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredAudit.map((log, i) => {
+              {filteredAudit.map((log) => {
                 const s = ACTION_STYLES[log.action] || ACTION_STYLES.update
                 return (
                   <tr
@@ -528,6 +515,19 @@ export default function AdminPage() {
 
         <div style={{ padding: '16px 10px', borderTop: '1px solid var(--border)' }}>
           <button
+            onClick={toggle}
+            style={{
+              width: '100%', padding: '9px 12px', borderRadius: 8,
+              border: '1px solid var(--border)', background: 'transparent',
+              color: 'var(--text-muted)', fontSize: 13, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'inherit',
+              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
+            }}
+          >
+            {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+          <button
             onClick={handleLogout}
             style={{
               width: '100%', padding: '9px 12px', borderRadius: 8,
@@ -538,7 +538,7 @@ export default function AdminPage() {
               display: 'flex', alignItems: 'center', gap: 8,
             }}
           >
-            🚪 Sign Out
+             Sign Out
           </button>
         </div>
       </div>

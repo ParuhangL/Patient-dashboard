@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity } from 'lucide-react'
+import { Activity, Sun, Moon } from 'lucide-react'
 import { register, login } from '../api/index'
+import { useTheme } from '../App'
 
 const RULES = {
   username: (v) => {
@@ -35,19 +36,17 @@ export default function RegisterPage({ onSuccess }) {
   const [touched, setTouched] = useState({ username: false, email: false, password: false, confirm: false })
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { theme, toggle } = useTheme()
 
   const getError = (key) => {
     if (!touched[key]) return ''
     return RULES[key](form[key], form)
   }
-
   const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
-
   const handleChange = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }))
     if (serverError) setServerError('')
   }
-
   const isFormValid = () => Object.keys(RULES).every((key) => RULES[key](form[key], form) === '')
 
   const handleSubmit = async () => {
@@ -70,12 +69,9 @@ export default function RegisterPage({ onSuccess }) {
 
   const field = (key, label, type = 'text', placeholder = '') => {
     const error = getError(key)
-    const hasError = !!error
     return (
       <div style={{ marginBottom: 16 }}>
-        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-          {label}
-        </label>
+        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>{label}</label>
         <input
           type={type}
           value={form[key]}
@@ -86,14 +82,12 @@ export default function RegisterPage({ onSuccess }) {
           style={{
             width: '100%', padding: '10px 14px', borderRadius: 8,
             background: 'var(--bg-base)',
-            border: `1px solid ${hasError ? '#ef4444' : 'var(--border)'}`,
+            border: `1px solid ${error ? '#ef4444' : 'var(--border)'}`,
             color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
             transition: 'border-color 0.15s',
           }}
         />
-        {hasError && (
-          <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{error}</div>
-        )}
+        {error && <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{error}</div>}
       </div>
     )
   }
@@ -107,7 +101,6 @@ export default function RegisterPage({ onSuccess }) {
         width: 400, background: 'var(--bg-surface)',
         border: '1px solid var(--border)', borderRadius: 16, padding: 40,
       }}>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
@@ -155,12 +148,24 @@ export default function RegisterPage({ onSuccess }) {
           {loading ? 'Creating account...' : 'Create account'}
         </button>
 
-        <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none' }}>
-            Sign in
-          </Link>
-        </p>
+        <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0 }}>
+            Already have an account?{' '}
+            <Link to="/login" style={{ color: '#3b82f6', textDecoration: 'none' }}>Sign in</Link>
+          </p>
+          <button
+            onClick={toggle}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'inherit', padding: 0, flexShrink: 0,
+            }}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
+        </div>
       </div>
     </div>
   )

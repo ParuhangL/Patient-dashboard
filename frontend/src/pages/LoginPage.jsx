@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Activity, Eye, EyeOff } from 'lucide-react'
+import { Activity, Eye, EyeOff, Sun, Moon } from 'lucide-react'
 import { login } from '../api/index'
+import { useTheme } from '../App'
 
 const RULES = {
   username: (v) => {
@@ -21,6 +22,7 @@ export default function LoginPage({ onSuccess }) {
   const [showPassword, setShowPassword] = useState(false)
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
+  const { theme, toggle } = useTheme()
 
   const getError = (key) => (!touched[key] ? '' : RULES[key](form[key]))
   const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
@@ -48,7 +50,6 @@ export default function LoginPage({ onSuccess }) {
   }
 
   const handleKey = (e) => { if (e.key === 'Enter') handleSubmit() }
-
   const usernameError = getError('username')
   const passwordError = getError('password')
 
@@ -61,7 +62,6 @@ export default function LoginPage({ onSuccess }) {
         width: 400, background: 'var(--bg-surface)',
         border: '1px solid var(--border)', borderRadius: 16, padding: 40,
       }}>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 10,
@@ -92,9 +92,7 @@ export default function LoginPage({ onSuccess }) {
         )}
 
         <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-            Username
-          </label>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Username</label>
           <input
             type="text"
             value={form.username}
@@ -109,15 +107,11 @@ export default function LoginPage({ onSuccess }) {
               color: 'var(--text-primary)', fontSize: 14, outline: 'none', boxSizing: 'border-box',
             }}
           />
-          {usernameError && (
-            <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{usernameError}</div>
-          )}
+          {usernameError && <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{usernameError}</div>}
         </div>
 
         <div style={{ marginBottom: 24 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>
-            Password
-          </label>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Password</label>
           <div style={{ position: 'relative' }}>
             <input
               type={showPassword ? 'text' : 'password'}
@@ -135,17 +129,12 @@ export default function LoginPage({ onSuccess }) {
             />
             <button
               onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0,
-              }}
+              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          {passwordError && (
-            <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{passwordError}</div>
-          )}
+          {passwordError && <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{passwordError}</div>}
         </div>
 
         <button
@@ -163,12 +152,10 @@ export default function LoginPage({ onSuccess }) {
 
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-muted)' }}>
           No account?{' '}
-          <Link to="/register" style={{ color: '#3b82f6', textDecoration: 'none' }}>
-            Create one
-          </Link>
+          <Link to="/register" style={{ color: '#3b82f6', textDecoration: 'none' }}>Create one</Link>
         </p>
 
-        <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link
             to="/admin-panel/login"
             style={{ fontSize: 11, color: 'var(--text-faint)', textDecoration: 'none' }}
@@ -177,6 +164,18 @@ export default function LoginPage({ onSuccess }) {
           >
             Staff access
           </Link>
+          <button
+            onClick={toggle}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'inherit', padding: 0,
+            }}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
         </div>
       </div>
     </div>

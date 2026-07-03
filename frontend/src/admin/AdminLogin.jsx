@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { Sun, Moon } from 'lucide-react'
+import { useTheme } from '../App'
 
 const RULES = {
   username: (v) => {
@@ -20,6 +22,7 @@ export default function AdminLogin() {
   const [serverError, setServerError] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { theme, toggle } = useTheme()
 
   const getError = (key) => (!touched[key] ? '' : RULES[key](form[key]))
   const handleBlur = (key) => setTouched((t) => ({ ...t, [key]: true }))
@@ -76,10 +79,7 @@ export default function AdminLogin() {
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={{
-            fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase',
-            letterSpacing: '0.4px', display: 'block', marginBottom: 6,
-          }}>
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>
             Username
           </label>
           <input
@@ -96,16 +96,11 @@ export default function AdminLogin() {
               outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
             }}
           />
-          {usernameError && (
-            <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{usernameError}</div>
-          )}
+          {usernameError && <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{usernameError}</div>}
         </div>
 
         <div style={{ marginBottom: 14 }}>
-          <label style={{
-            fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase',
-            letterSpacing: '0.4px', display: 'block', marginBottom: 6,
-          }}>
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: 6 }}>
             Password
           </label>
           <input
@@ -122,16 +117,11 @@ export default function AdminLogin() {
               outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
             }}
           />
-          {passwordError && (
-            <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{passwordError}</div>
-          )}
+          {passwordError && <div style={{ fontSize: 11, color: '#f87171', marginTop: 5 }}>{passwordError}</div>}
         </div>
 
         {serverError && (
-          <div style={{
-            padding: '9px 12px', background: '#450a0a',
-            borderRadius: 8, color: '#fca5a5', fontSize: 13, marginBottom: 14,
-          }}>
+          <div style={{ padding: '9px 12px', background: '#450a0a', borderRadius: 8, color: '#fca5a5', fontSize: 13, marginBottom: 14 }}>
             {serverError}
           </div>
         )}
@@ -150,10 +140,22 @@ export default function AdminLogin() {
           {loading ? 'Signing in…' : 'Sign in as Admin'}
         </button>
 
-        <div style={{ marginTop: 16, textAlign: 'center' }}>
+        <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <a href="/" style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>
             ← Back to main app
           </a>
+          <button
+            onClick={toggle}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', fontSize: 12,
+              display: 'flex', alignItems: 'center', gap: 5,
+              fontFamily: 'inherit', padding: 0,
+            }}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          </button>
         </div>
       </div>
     </div>
